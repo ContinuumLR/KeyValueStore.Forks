@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.16
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{5D6C318C-DD86-4910-99FD-F4432056F433}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Integration", "Core\Integration\Integration.csproj", "{FDBE5883-3E1A-49A9-A97A-81780539A163}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Utilities", "Utilities", "{3A401F3B-C21A-4F28-928E-B1EAF9BAE60F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{6D8CB7B6-3D8B-4CFC-B94D-7DEFDBB6D257}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FDBE5883-3E1A-49A9-A97A-81780539A163}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FDBE5883-3E1A-49A9-A97A-81780539A163}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FDBE5883-3E1A-49A9-A97A-81780539A163}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FDBE5883-3E1A-49A9-A97A-81780539A163}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{FDBE5883-3E1A-49A9-A97A-81780539A163} = {5D6C318C-DD86-4910-99FD-F4432056F433}
+	EndGlobalSection
+EndGlobal
