@@ -44,11 +44,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Extensions\StackExchangeRedisKeyValueStoreExtensions.cs" />
+    <Compile Include="Impl\StackExchangeRedisKeyValueStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Impl\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
@@ -56,6 +56,10 @@
     <ProjectReference Include="..\Common\Common.csproj">
       <Project>{7AF34478-9B31-4016-B1F1-3A8E824E166C}</Project>
       <Name>Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Forks\Forks.csproj">
+      <Project>{315034b9-a99f-4253-8581-b74950d9407d}</Project>
+      <Name>Forks</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

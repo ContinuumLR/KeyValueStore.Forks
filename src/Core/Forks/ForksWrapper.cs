@@ -9,6 +9,9 @@ namespace KVS.Forks.Core
         public ForksWrapper(IKeyValueStore<TDataTypesEnum> keyValueStore)
         {
             _keyValueStore = keyValueStore ?? throw new ArgumentNullException(nameof(keyValueStore));
+
+            if (!typeof(TDataTypesEnum).IsEnum)
+                throw new ArgumentException("TDataTypesEnum must be an enumerated type");
         }
 
         private IKeyValueStore<TDataTypesEnum> _keyValueStore;
@@ -27,7 +30,7 @@ namespace KVS.Forks.Core
         // wrapper.Set<User>(type.String, "key", user, null);
         // wrapper.Set<UserInHash>(type.Hash, "key2", user, new RedisHashParams { HashKey = "hashKey" });
 
-        public bool Set<T>(TDataTypesEnum type, string key, T value, object extraParams)
+        public bool Set<T>(TDataTypesEnum type, string key, T value, object extraParams = null)
         {
             return KeyValueStore.Set(type, key, value, extraParams);
         }
@@ -37,7 +40,7 @@ namespace KVS.Forks.Core
             return KeyValueStore.Set(type, values);
         }
 
-        public T Get<T>(TDataTypesEnum type, string key, object extraParams)
+        public T Get<T>(TDataTypesEnum type, string key, object extraParams = null)
         {
             return KeyValueStore.Get<T>(type, key,extraParams);
         }
