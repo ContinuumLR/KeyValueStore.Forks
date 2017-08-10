@@ -11,7 +11,7 @@ namespace KVS.Forks.Core
             _keyValueStore = keyValueStore ?? throw new ArgumentNullException(nameof(keyValueStore));
 
             if (!typeof(TDataTypesEnum).IsEnum)
-                throw new ArgumentException("TDataTypesEnum must be an enumerated type");
+                throw new ArgumentException($"{nameof(TDataTypesEnum)} must be an enumerated type");
         }
 
         private IKeyValueStore<TDataTypesEnum> _keyValueStore;
@@ -45,7 +45,7 @@ namespace KVS.Forks.Core
             return KeyValueStore.Get<T>(type, key,extraParams);
         }
 
-        public IEnumerable<T> Get<T>(TDataTypesEnum type, IEnumerable<Tuple<string, object>> keys)
+        public IDictionary<string, T> Get<T>(TDataTypesEnum type, IEnumerable<Tuple<string, object>> keys)
         {
             return KeyValueStore.Get<T>(type, keys);
         }

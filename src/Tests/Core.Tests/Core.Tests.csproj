@@ -49,6 +49,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CoreTests.cs" />
+    <Compile Include="Integration\HelpersTests.cs" />
+    <Compile Include="Integration\StackExchangeRedisKeyValueStoreTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

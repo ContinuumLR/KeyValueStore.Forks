@@ -44,8 +44,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Extensions\StackExchangeRedisKeyValueStoreExtensions.cs" />
-    <Compile Include="Impl\StackExchangeRedisKeyValueStore.cs" />
+    <Compile Include="Helpers\ParamsCastHelper.cs" />
+    <Compile Include="Redis\StackExchange\Params\StackExchangeRedisHashParams.cs" />
+    <Compile Include="Redis\StackExchange\StackExchangeRedisKeyValueStoreExtensions.cs" />
+    <Compile Include="Redis\StackExchange\StackExchangeRedisKeyValueStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup />
