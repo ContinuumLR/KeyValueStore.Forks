@@ -91,7 +91,7 @@ namespace KVS.Forks.Core.Redis.StackExchange
                     }).ToArray();
 
                     var hashValues = db.HashGet(key, hashFields);
-                        
+
                     for (int i = 0; i < keys.Count(); i++)
                     {
                         if (!hashValues[i].IsNull)
