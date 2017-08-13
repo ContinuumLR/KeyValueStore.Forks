@@ -51,6 +51,8 @@ namespace KVS.Forks.Core
             if (Fork.ReadOnly)
                 return false;
 
+            KeyValueStore.Delete(type, GenerateNullKey(Fork, key), extraParams); ;
+            
             var forkedKey = GenerateForkedKey(Fork, key);
 
             return KeyValueStore.Set(type, forkedKey, value, extraParams);
@@ -60,7 +62,9 @@ namespace KVS.Forks.Core
         {
             if (Fork.ReadOnly)
                 return false;
-
+            
+            KeyValueStore.Delete(type, values.Select(x => Tuple.Create(GenerateNullKey(Fork, x.Item1), x.Item3)));
+            
             var forkedValues = values.Select(x => Tuple.Create(GenerateForkedKey(Fork, x.Item1), x.Item2, x.Item3));
 
             return KeyValueStore.Set(type, forkedValues);
@@ -73,9 +77,12 @@ namespace KVS.Forks.Core
             while (currentFork != null)
             {
                 var value = KeyValueStore.Get<T>(type, GenerateForkedKey(currentFork, key), extraParams);
-
+                
                 if (value != null)
                     return value;
+
+                if (KeyValueStore.Exists(type, GenerateNullKey(currentFork, key),null))
+                    return default(T);
 
                 currentFork = currentFork.Parent;
             }
@@ -114,6 +121,15 @@ namespace KVS.Forks.Core
 
                 missingKeys = missingKeys.Except(values.Keys.Select(x=> generatedKeyToOriginalKey[x])).ToList();
 
+                var nullMissingKeys = new List<string>();
+                foreach (var missingKey in missingKeys.ToList())
+                {
+                    if (KeyValueStore.Exists(type, GenerateNullKey(currentFork, missingKey), keysDict[missingKey]))
+                        nullMissingKeys.Add(missingKey);
+                }
+
+                missingKeys = missingKeys.Except(nullMissingKeys).ToList();
+
                 if (missingKeys.Count == 0)
                     break;
 
@@ -123,9 +139,34 @@ namespace KVS.Forks.Core
             return res;
         }
 
+        public bool Delete(TDataTypesEnum type, string key, object extraParams = null)
+        {
+            var res = KeyValueStore.Delete(type, GenerateForkedKey(Fork, key), extraParams);
+
+            if (Fork.GetAllParents().Any(x => KeyValueStore.Exists(type, GenerateForkedKey(x, key), extraParams)))
+                return KeyValueStore.Set(type, GenerateNullKey(Fork, key), 0, extraParams);
+
+            return res;
+        }
+
+        public bool Delete(TDataTypesEnum type, IEnumerable<Tuple<string,object>> keys)
+        {
+            var success = true;
+
+            foreach (var key in keys)
+                success = success && Delete(type, key.Item1, key.Item2);
+
+            return success;
+        }
+        
         private string GenerateForkedKey(Fork fork, string key)
         {
             return $"{AppId}:{fork.Id}:{key}";
+        }
+
+        private string GenerateNullKey(Fork fork, string key)
+        {
+            return $"{GenerateForkedKey(fork,key)}:KVSNull";
         }
     }
 }

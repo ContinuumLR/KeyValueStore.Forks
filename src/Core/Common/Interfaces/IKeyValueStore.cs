@@ -12,6 +12,9 @@ namespace KVS.Forks.Core.Interfaces
         bool Set<T>(TDataTypesEnum type, IEnumerable<Tuple<string, T, object>> values);
         T Get<T>(TDataTypesEnum type, string key, object extraParams);
         IDictionary<string, T> Get<T>(TDataTypesEnum type, IEnumerable<Tuple<string, object>> keys);
+        bool Delete(TDataTypesEnum type, string key, object extraParams);
+        bool Delete(TDataTypesEnum type, IEnumerable<Tuple<string, object>> keys);
+        bool Exists(TDataTypesEnum type, string key, object extraParams);
 
         TDataTypesEnum DefaultType { get; }
     }

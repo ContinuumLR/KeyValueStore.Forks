@@ -50,5 +50,27 @@ namespace KVS.Forks.Core.Redis.StackExchange
         {
             return wrapper.Get<T>(StackExchangeRedisDataTypesEnum.Hash, hashFields.Select(x => Tuple.Create<string, object>(key, new StackExchangeRedisHashParams { HashField = x })));
         }
+
+        public static bool KeyDelete(this ForksWrapper<StackExchangeRedisDataTypesEnum> wrapper, string key)
+        {
+            return wrapper.Delete(StackExchangeRedisDataTypesEnum.String, key);
+        }
+
+        public static bool KeyDelete(this ForksWrapper<StackExchangeRedisDataTypesEnum> wrapper, string[] keys)
+        {
+            return wrapper.Delete(StackExchangeRedisDataTypesEnum.String, keys.Select(x => Tuple.Create<string, object>(x, null)).ToArray());
+        }
+
+        public static bool HashDelete(this ForksWrapper<StackExchangeRedisDataTypesEnum> wrapper, string key, string hashField)
+        {
+            return wrapper.Delete(StackExchangeRedisDataTypesEnum.Hash, key, new StackExchangeRedisHashParams { HashField = hashField });
+        }
+
+        public static bool HashDelete(this ForksWrapper<StackExchangeRedisDataTypesEnum> wrapper, string key, string[] hashFields)
+        {
+            return wrapper.Delete(StackExchangeRedisDataTypesEnum.Hash,
+                hashFields.Select(x => Tuple.Create<string, object>(key,
+                new StackExchangeRedisHashParams { HashField = x })).ToArray());
+        }
     }
 }

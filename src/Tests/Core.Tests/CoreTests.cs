@@ -11,7 +11,7 @@ namespace Core.Tests
     public class CoreTests
     {
         [TestMethod]
-        public void ForksWrapper_ForkTest()
+        public void ForksWrapper_ForkGetSetTest()
         {
             var fork = new Fork
             {
@@ -30,7 +30,7 @@ namespace Core.Tests
                 Id = 4,
                 Parent = fork
             };
-            fork.Children.Add(childFork);
+            fork.Children.Add(childFork2);
 
             var childChildFork = new Fork
             {
@@ -69,6 +69,39 @@ namespace Core.Tests
             Assert.AreEqual(1, res["testKey1"]);
             Assert.AreEqual(2, res["testKey2"]);
             Assert.AreEqual(2, res.Count);
+        }
+
+        [TestMethod]
+        public void ForksWrapper_ForkDeleteTest()
+        {
+            var fork = new Fork
+            {
+                Id = 1
+            };
+
+            var childFork = new Fork
+            {
+                Id = 2,
+                Parent = fork
+            };
+            fork.Children.Add(childFork);
+            
+            var store = new StackExchangeRedisKeyValueStore("localhost:6379");
+            var wrapper = new ForksWrapper<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store, 2, fork);
+
+            wrapper.StringSet(new List<KeyValuePair<string, int>> { new KeyValuePair<string,int>("testKey1", 1),
+                new KeyValuePair<string, int>("testKey2", 2) }.ToArray());
+
+            wrapper = new ForksWrapper<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store, 2, childFork);
+            wrapper.StringSet("testKey3", 3);
+            wrapper.StringSet("testKey2", 4);
+
+            wrapper.KeyDelete(new string[] { "testKey2", "testKey3" });
+            
+            var res = wrapper.StringGet<int>(new string[] { "testKey1", "testKey2", "testKey3" });
+            
+            Assert.AreEqual(1, res["testKey1"]);
+            Assert.AreEqual(1, res.Count);
         }
     }
 }
