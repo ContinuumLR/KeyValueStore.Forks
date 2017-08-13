@@ -103,5 +103,15 @@ namespace Core.Tests
             Assert.AreEqual(1, res["testKey1"]);
             Assert.AreEqual(1, res.Count);
         }
+
+        [TestMethod]
+        public void ForksManager_CreateApp()
+        {
+            var store = new StackExchangeRedisKeyValueStore("localhost:6379");
+            var manager = new ForksManager<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store);
+
+            manager.CreateApp(1, "test", "some test app");
+            manager.CreateFork(2, "test2", "some test fork", 1);
+        }
     }
 }
