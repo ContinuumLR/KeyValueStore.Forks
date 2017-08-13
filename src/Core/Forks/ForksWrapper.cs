@@ -61,9 +61,9 @@ namespace KVS.Forks.Core
             if (Fork.ReadOnly)
                 return false;
 
-            KeyValueStore.Delete(type, KeyGenerator.GenerateNullKey(AppId, Fork.Id, key), extraParams); ;
+            KeyValueStore.Delete(type, KeyGenerator.GenerateForkNullKey(AppId, Fork.Id, key), extraParams); ;
 
-            var forkedKey = KeyGenerator.GenerateForkedKey(AppId, Fork.Id, key);
+            var forkedKey = KeyGenerator.GenerateForkValueKey(AppId, Fork.Id, key);
 
             return KeyValueStore.Set(type, forkedKey, value, extraParams);
         }
@@ -73,9 +73,9 @@ namespace KVS.Forks.Core
             if (Fork.ReadOnly)
                 return false;
 
-            KeyValueStore.Delete(type, values.Select(x => Tuple.Create(KeyGenerator.GenerateNullKey(AppId, Fork.Id, x.Item1), x.Item3)));
+            KeyValueStore.Delete(type, values.Select(x => Tuple.Create(KeyGenerator.GenerateForkNullKey(AppId, Fork.Id, x.Item1), x.Item3)));
 
-            var forkedValues = values.Select(x => Tuple.Create(KeyGenerator.GenerateForkedKey(AppId, Fork.Id, x.Item1), x.Item2, x.Item3));
+            var forkedValues = values.Select(x => Tuple.Create(KeyGenerator.GenerateForkValueKey(AppId, Fork.Id, x.Item1), x.Item2, x.Item3));
 
             return KeyValueStore.Set(type, forkedValues);
         }
@@ -86,12 +86,12 @@ namespace KVS.Forks.Core
 
             while (currentFork != null)
             {
-                var value = KeyValueStore.Get<T>(type, KeyGenerator.GenerateForkedKey(AppId, currentFork.Id, key), extraParams);
+                var value = KeyValueStore.Get<T>(type, KeyGenerator.GenerateForkValueKey(AppId, currentFork.Id, key), extraParams);
 
                 if (value != null)
                     return value;
 
-                if (KeyValueStore.Exists(type, KeyGenerator.GenerateNullKey(AppId, currentFork.Id, key), null))
+                if (KeyValueStore.Exists(type, KeyGenerator.GenerateForkNullKey(AppId, currentFork.Id, key), null))
                     return default(T);
 
                 currentFork = currentFork.Parent;
@@ -117,7 +117,7 @@ namespace KVS.Forks.Core
 
                 foreach (var key in missingKeys)
                 {
-                    var generatedKey = KeyGenerator.GenerateForkedKey(AppId, currentFork.Id, key);
+                    var generatedKey = KeyGenerator.GenerateForkValueKey(AppId, currentFork.Id, key);
                     keysForGet.Add(Tuple.Create(generatedKey, keysDict[key]));
                     generatedKeyToOriginalKey[generatedKey] = key;
                 }
@@ -134,7 +134,7 @@ namespace KVS.Forks.Core
                 var nullMissingKeys = new List<string>();
                 foreach (var missingKey in missingKeys.ToList())
                 {
-                    if (KeyValueStore.Exists(type, KeyGenerator.GenerateNullKey(AppId, currentFork.Id, missingKey), keysDict[missingKey]))
+                    if (KeyValueStore.Exists(type, KeyGenerator.GenerateForkNullKey(AppId, currentFork.Id, missingKey), keysDict[missingKey]))
                         nullMissingKeys.Add(missingKey);
                 }
 
@@ -151,10 +151,10 @@ namespace KVS.Forks.Core
 
         public bool Delete(TDataTypesEnum type, string key, object extraParams = null)
         {
-            var res = KeyValueStore.Delete(type, KeyGenerator.GenerateForkedKey(AppId, Fork.Id, key), extraParams);
+            var res = KeyValueStore.Delete(type, KeyGenerator.GenerateForkValueKey(AppId, Fork.Id, key), extraParams);
 
-            if (Fork.GetAllParents().Any(x => KeyValueStore.Exists(type, KeyGenerator.GenerateForkedKey(AppId, x.Id, key), extraParams)))
-                return KeyValueStore.Set(type, KeyGenerator.GenerateNullKey(AppId, Fork.Id, key), 0, extraParams);
+            if (Fork.GetAllParents().Any(x => KeyValueStore.Exists(type, KeyGenerator.GenerateForkValueKey(AppId, x.Id, key), extraParams)))
+                return KeyValueStore.Set(type, KeyGenerator.GenerateForkNullKey(AppId, Fork.Id, key), 0, extraParams);
 
             return res;
         }

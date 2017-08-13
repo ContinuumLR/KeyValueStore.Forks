@@ -69,12 +69,12 @@ namespace KVS.Forks.Core
         /// <param name="description"></param>
         public void CreateApp(int appId, string name, string description)
         {
-            var appIds = KeyValueStore.Get<List<int>>(KeyValueStore.DefaultType, "KVSF:Apps", null);
+            var appIds = KeyValueStore.Get<List<int>>(KeyValueStore.DefaultType, KeyGenerator.AppsKey, null);
 
             if (appIds == null)
             {
                 appIds = new List<int>();
-                KeyValueStore.Set(KeyValueStore.DefaultType, "KVSF:Apps", appIds, null);
+                KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.AppsKey, appIds, null);
             }
 
             if (appIds.Contains(appId))
@@ -82,7 +82,7 @@ namespace KVS.Forks.Core
 
             appIds.Add(appId);
 
-            KeyValueStore.Set(KeyValueStore.DefaultType, "KVSF:Apps", appIds, null);
+            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.AppsKey, appIds, null);
 
             var res = new App
             {
@@ -91,7 +91,7 @@ namespace KVS.Forks.Core
                 Description = description
             };
 
-            KeyValueStore.Set(KeyValueStore.DefaultType, $"KVSF:App:{appId}", ProtoBufSerializerHelper.Serialize(res), null);
+            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateAppKey(appId), ProtoBufSerializerHelper.Serialize(res), null);
 
             SetApp(appId);
 
@@ -109,29 +109,29 @@ namespace KVS.Forks.Core
                 Name = "master"
             };
 
-            KeyValueStore.Set(KeyValueStore.DefaultType, $"KVSF:{AppId}:Forks", forkIds, null);
-            KeyValueStore.Set(KeyValueStore.DefaultType, $"KVSF:{AppId}:Fork:1", ProtoBufSerializerHelper.Serialize(masterFork), null);
+            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), forkIds, null);
+            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId, 1), ProtoBufSerializerHelper.Serialize(masterFork), null);
         }
 
         public void CreateFork(int id, string name, string description, int parentForkId)
         {
             if (parentForkId == 0) throw new ArgumentNullException(nameof(parentForkId));
 
-            var parentForkData = KeyValueStore.Get<byte[]>(KeyValueStore.DefaultType, $"KVSF:{AppId}:Fork:{parentForkId}", null);
+            var parentForkData = KeyValueStore.Get<byte[]>(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId,parentForkId), null);
 
             if (parentForkData == null)
                 throw new ArgumentException($"{parentForkId} doesn't reference actual fork");
 
             var parentFork = ProtoBufSerializerHelper.Deserialize<Fork>(parentForkData);
 
-            var forkIds = KeyValueStore.Get<List<int>>(KeyValueStore.DefaultType, $"KVSF:{AppId}:Forks", null);
+            var forkIds = KeyValueStore.Get<List<int>>(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), null);
             
             if (forkIds.Contains(id))
                 throw new ArgumentException(nameof(id));
 
             forkIds.Add(id);
 
-            KeyValueStore.Set(KeyValueStore.DefaultType, $"KVSF:{AppId}:Forks", forkIds, null);
+            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), forkIds, null);
             
             var newFork = new Fork
             {
@@ -141,7 +141,7 @@ namespace KVS.Forks.Core
                 Parent = parentFork
             };
 
-            KeyValueStore.Set(KeyValueStore.DefaultType, $"KVSF:{AppId}:Fork:{id}", ProtoBufSerializerHelper.Serialize(newFork), null);
+            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId, id), ProtoBufSerializerHelper.Serialize(newFork), null);
         }
         
         public ForksWrapper<TDataTypesEnum> GetWrapper(int forkId)
