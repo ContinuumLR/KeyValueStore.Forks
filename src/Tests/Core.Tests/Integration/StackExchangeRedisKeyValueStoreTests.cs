@@ -38,6 +38,23 @@ namespace Core.Tests.Integration
             Assert.AreEqual(1, multipleRes["testKey1_1"]);
             Assert.AreEqual(2, multipleRes["testKey1_2"]);
             Assert.AreEqual(3, multipleRes["testKey1_3"]);
+
+
+            store.Delete(StackExchangeRedisDataTypesEnum.String, new List<Tuple<string, object>>
+            {
+                Tuple.Create<string, object>("testKey1_1", null),
+                Tuple.Create<string, object>("testKey1_2", null)
+            });
+
+            multipleRes = store.Get<int>(StackExchangeRedisDataTypesEnum.String, new List<Tuple<string, object>>
+            {
+                Tuple.Create<string, object>("testKey1_1", null),
+                Tuple.Create<string, object>("testKey1_2", null),
+                Tuple.Create<string, object>("testKey1_3", null)
+            });
+
+            Assert.AreEqual(3, multipleRes["testKey1_3"]);
+            Assert.AreEqual(1, multipleRes.Count);
         }
 
         [TestMethod]
@@ -67,6 +84,31 @@ namespace Core.Tests.Integration
             Assert.AreEqual(4, multipleRes["testKey2_1_1"]);
             Assert.AreEqual(5, multipleRes["testKey2_1_2"]);
             Assert.AreEqual(6, multipleRes["testKey2_1_3"]);
+
+
+            store.Delete(StackExchangeRedisDataTypesEnum.Hash, new List<Tuple<string, object>>
+            {
+                Tuple.Create<string, object>("testKey2_1", new StackExchangeRedisHashParams { HashField = "testKey2_1_2" } ),
+                Tuple.Create<string, object>("testKey2_1", new StackExchangeRedisHashParams { HashField = "testKey2_1_3" } )
+            });
+            multipleRes = store.Get<int>(StackExchangeRedisDataTypesEnum.Hash, new List<Tuple<string, object>>
+            {
+                Tuple.Create<string, object>("testKey2_1", new StackExchangeRedisHashParams { HashField = "testKey2_1_1" } ),
+                Tuple.Create<string, object>("testKey2_1", new StackExchangeRedisHashParams { HashField = "testKey2_1_2" } ),
+                Tuple.Create<string, object>("testKey2_1", new StackExchangeRedisHashParams { HashField = "testKey2_1_3" } )
+            });
+
+            Assert.AreEqual(4, multipleRes["testKey2_1_1"]);
+            Assert.AreEqual(1, multipleRes.Count);
+
+            store.Delete(StackExchangeRedisDataTypesEnum.Hash, "testKey2_1", null);
+            multipleRes = store.Get<int>(StackExchangeRedisDataTypesEnum.Hash, new List<Tuple<string, object>>
+            {
+                Tuple.Create<string, object>("testKey2_1", new StackExchangeRedisHashParams { HashField = "testKey2_1_1" } ),
+                Tuple.Create<string, object>("testKey2_1", new StackExchangeRedisHashParams { HashField = "testKey2_1_2" } ),
+                Tuple.Create<string, object>("testKey2_1", new StackExchangeRedisHashParams { HashField = "testKey2_1_3" } )
+            });
+            Assert.AreEqual(0, multipleRes.Count);
         }
 
         [TestMethod]

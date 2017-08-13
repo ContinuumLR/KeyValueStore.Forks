@@ -64,7 +64,7 @@ namespace KVS.Forks.Core.Redis.StackExchange
             var db = _redis.GetDatabase();
 
             var res = new Dictionary<string, T>();
-
+            
             switch (type)
             {
                 case StackExchangeRedisDataTypesEnum.String:
@@ -148,6 +148,70 @@ namespace KVS.Forks.Core.Redis.StackExchange
                     db.HashSet(key, hashEntries);
 
                     return true;
+            }
+
+            return false;
+        }
+
+        public bool Delete(StackExchangeRedisDataTypesEnum type, string key, object extraParams)
+        {
+            var db = _redis.GetDatabase();
+
+            switch (type)
+            {
+                case StackExchangeRedisDataTypesEnum.String:
+                    return db.KeyDelete(key);
+                case StackExchangeRedisDataTypesEnum.Hash:
+                    if (extraParams == null)
+                        return db.KeyDelete(key);
+                    else 
+                    {
+                        var castedExtraParams = ParamsCastHelper.TryCastParams<StackExchangeRedisHashParams>(extraParams);
+                        if (!string.IsNullOrEmpty(castedExtraParams.HashField))
+                            return db.HashDelete(key, castedExtraParams.HashField);
+                        else
+                            return db.KeyDelete(key);
+                    }
+            }
+
+            return false;
+        }
+
+        public bool Delete(StackExchangeRedisDataTypesEnum type, IEnumerable<Tuple<string, object>> keys)
+        {
+            var db = _redis.GetDatabase();
+
+            switch (type)
+            {
+                case StackExchangeRedisDataTypesEnum.String:
+                    return db.KeyDelete(keys.Select(x => (RedisKey)x.Item1).ToArray()) == keys.Count();
+                case StackExchangeRedisDataTypesEnum.Hash:
+                    if (keys.Select(x=> x.Item1).Distinct().Count() > 1) throw new ArgumentException($"Using type {nameof(StackExchangeRedisDataTypesEnum.Hash)} - only one distinct key is allowed");
+                    var key = keys.First().Item1;
+
+                    var hashFields = keys.Select(x =>
+                    {
+                        var castedExtraParams = ParamsCastHelper.TryCastParams<StackExchangeRedisHashParams>(x.Item2);
+                        return (RedisValue)castedExtraParams.HashField;
+                    }).ToArray();
+
+                    return db.HashDelete(key, hashFields) == keys.Count();
+            }
+
+            return false;
+        }
+
+        public bool Exists(StackExchangeRedisDataTypesEnum type, string key, object extraParams)
+        {
+            var db = _redis.GetDatabase();
+
+            switch (type)
+            {
+                case StackExchangeRedisDataTypesEnum.String:
+                    return db.KeyExists(key);
+                case StackExchangeRedisDataTypesEnum.Hash:
+                    var castedExtraParams = ParamsCastHelper.TryCastParams<StackExchangeRedisHashParams>(extraParams);
+                    return db.HashExists(key, castedExtraParams.HashField);
             }
 
             return false;
