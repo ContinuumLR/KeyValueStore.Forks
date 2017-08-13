@@ -1,4 +1,5 @@
 ﻿using KVS.Forks.Core.Entities;
+using KVS.Forks.Core.Helpers;
 using KVS.Forks.Core.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -44,7 +45,7 @@ namespace KVS.Forks.Core
             _forkId = forkId;
             _appId = appId;
 
-            UpdateCurrentFork();
+            Task.Factory.StartNew(() => UpdateCurrentFork(), TaskCreationOptions.LongRunning);
         }
 
         private AutoResetEvent _updateFork = new AutoResetEvent(false);
@@ -65,12 +66,10 @@ namespace KVS.Forks.Core
             while (true)
             {
                 var newTimeStamp = Store.Get<DateTime>(Store.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, ForkId), null);
-
-                var updateFork = newTimeStamp > _currentForkTimeStamp;
-
-                if (updateFork)
+                
+                if (newTimeStamp > _currentForkTimeStamp)
                 {
-                    _currentFork = Store.Get<Fork>(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, ForkId), null);
+                    _currentFork = ProtoBufSerializerHelper.Deserialize<Fork>(Store.Get<byte[]>(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, ForkId), null));
                     _currentForkTimeStamp = newTimeStamp;
                     RaiseForkChanged();
                 }

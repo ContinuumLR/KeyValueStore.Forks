@@ -16,7 +16,7 @@ namespace KVS.Forks.Core.Entities
         [ProtoMember(3)]
         public virtual string Description { get; set; }
 
-        [ProtoMember(4)]
+        [ProtoMember(4, AsReference = true)]
         public virtual Fork Parent { get; set; }
 
         [ProtoMember(5)]

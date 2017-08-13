@@ -8,14 +8,7 @@ namespace KVS.Forks.Core
 {
     public class ForksWrapper<TDataTypesEnum>
     {
-        private Fork _fork;
-        private Fork Fork
-        {
-            get
-            {
-                return _fork; //get fork from store
-            }
-        }
+        private Fork Fork { get; set; }
 
         private readonly int _appId;
         public int AppId
@@ -29,22 +22,22 @@ namespace KVS.Forks.Core
         private readonly ForkProvider<TDataTypesEnum> _forkProvider;
 
         public ForksWrapper(IKeyValueStore<TDataTypesEnum> keyValueStore,
-            int appId, Fork fork)
+            int appId, int forkId)
         {
             _keyValueStore = keyValueStore ?? throw new ArgumentNullException(nameof(keyValueStore));
-            _fork = fork ?? throw new ArgumentNullException(nameof(fork));
             _appId = appId;
-
-            _forkProvider = new ForkProvider<TDataTypesEnum>(keyValueStore, AppId, fork.Id);
-            _forkProvider.ForkChanged += _forkProvider_ForkChanged;
 
             if (!typeof(TDataTypesEnum).IsEnum)
                 throw new ArgumentException($"{nameof(TDataTypesEnum)} must be an enumerated type");
+
+            _forkProvider = new ForkProvider<TDataTypesEnum>(keyValueStore, AppId, forkId);
+            _forkProvider.ForkChanged += _forkProvider_ForkChanged;
+            Fork = _forkProvider.CurrentFork;
         }
 
         private void _forkProvider_ForkChanged(object sender, EventArgs e)
         {
-            _fork = _forkProvider.CurrentFork;
+            Fork = _forkProvider.CurrentFork;
         }
 
         private IKeyValueStore<TDataTypesEnum> _keyValueStore;
@@ -151,6 +144,9 @@ namespace KVS.Forks.Core
 
         public bool Delete(TDataTypesEnum type, string key, object extraParams = null)
         {
+            if (Fork.ReadOnly)
+                return false;
+
             var res = KeyValueStore.Delete(type, KeyGenerator.GenerateForkValueKey(AppId, Fork.Id, key), extraParams);
 
             if (Fork.GetAllParents().Any(x => KeyValueStore.Exists(type, KeyGenerator.GenerateForkValueKey(AppId, x.Id, key), extraParams)))
@@ -161,6 +157,9 @@ namespace KVS.Forks.Core
 
         public bool Delete(TDataTypesEnum type, IEnumerable<Tuple<string, object>> keys)
         {
+            if (Fork.ReadOnly)
+                return false;
+
             var success = true;
 
             foreach (var key in keys)

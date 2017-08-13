@@ -142,14 +142,19 @@ namespace KVS.Forks.Core
             };
 
             KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId, id), ProtoBufSerializerHelper.Serialize(newFork), null);
+
+            parentFork.Children.Add(newFork);
+
+            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId, parentFork.Id), ProtoBufSerializerHelper.Serialize(parentFork), null);
+
+            //Set timestamps
+            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, id), DateTime.UtcNow, null);
+            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, parentFork.Id), DateTime.UtcNow, null);
         }
         
         public ForksWrapper<TDataTypesEnum> GetWrapper(int forkId)
         {
-            return new ForksWrapper<TDataTypesEnum>(KeyValueStore, AppId, new Fork
-            {
-                Id = 1
-            });
+            return new ForksWrapper<TDataTypesEnum>(KeyValueStore, AppId, forkId);
         }
     }
 }

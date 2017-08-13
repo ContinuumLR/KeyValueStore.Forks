@@ -4,6 +4,7 @@ using KVS.Forks.Core;
 using KVS.Forks.Core.Redis.StackExchange;
 using System.Collections.Generic;
 using KVS.Forks.Core.Entities;
+using System.Threading;
 
 namespace Core.Tests
 {
@@ -40,12 +41,12 @@ namespace Core.Tests
             childFork.Children.Add(childChildFork);
 
             var store = new StackExchangeRedisKeyValueStore("localhost:6379");
-            var wrapper = new ForksWrapper<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store, 1, fork);
+            var wrapper = new ForksWrapper<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store, 1, fork.Id);
 
             wrapper.StringSet(new List<KeyValuePair<string, int>> { new KeyValuePair<string,int>("testKey1", 1),
                 new KeyValuePair<string, int>("testKey2", 2) }.ToArray());
 
-            wrapper = new ForksWrapper<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store, 1, childFork);
+            wrapper = new ForksWrapper<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store, 1, childFork.Id);
             wrapper.StringSet("testKey3", 3);
             var res = wrapper.StringGet<int>(new string[] { "testKey1", "testKey2", "testKey3" });
 
@@ -54,7 +55,7 @@ namespace Core.Tests
             Assert.AreEqual(3, res["testKey3"]);
             Assert.AreEqual(3, res.Count);
 
-            wrapper = new ForksWrapper<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store, 1, childChildFork);
+            wrapper = new ForksWrapper<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store, 1, childChildFork.Id);
             wrapper.StringSet("testKey3", 3);
             res = wrapper.StringGet<int>(new string[] { "testKey1", "testKey2", "testKey3" });
 
@@ -63,7 +64,7 @@ namespace Core.Tests
             Assert.AreEqual(3, res["testKey3"]);
             Assert.AreEqual(3, res.Count);
 
-            wrapper = new ForksWrapper<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store, 1, childFork2);
+            wrapper = new ForksWrapper<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store, 1, childFork2.Id);
             res = wrapper.StringGet<int>(new string[] { "testKey1", "testKey2", "testKey3" });
 
             Assert.AreEqual(1, res["testKey1"]);
@@ -87,12 +88,12 @@ namespace Core.Tests
             fork.Children.Add(childFork);
             
             var store = new StackExchangeRedisKeyValueStore("localhost:6379");
-            var wrapper = new ForksWrapper<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store, 2, fork);
+            var wrapper = new ForksWrapper<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store, 2, fork.Id);
 
             wrapper.StringSet(new List<KeyValuePair<string, int>> { new KeyValuePair<string,int>("testKey1", 1),
                 new KeyValuePair<string, int>("testKey2", 2) }.ToArray());
 
-            wrapper = new ForksWrapper<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store, 2, childFork);
+            wrapper = new ForksWrapper<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store, 2, childFork.Id);
             wrapper.StringSet("testKey3", 3);
             wrapper.StringSet("testKey2", 4);
 
@@ -111,7 +112,17 @@ namespace Core.Tests
             var manager = new ForksManager<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store);
 
             manager.CreateApp(1, "test", "some test app");
+
+            var masterWrapper = manager.GetWrapper(1);
+
             manager.CreateFork(2, "test2", "some test fork", 1);
+
+            manager.GetWrapper(2);
+
+            manager.CreateFork(3, "test3", "some test fork", 1);
+            manager.CreateFork(4, "test4", "some test fork", 2);
+
+            Thread.Sleep(50000);
         }
     }
 }
