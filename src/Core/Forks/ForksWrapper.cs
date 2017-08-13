@@ -8,7 +8,7 @@ namespace KVS.Forks.Core
 {
     public class ForksWrapper<TDataTypesEnum>
     {
-        private readonly Fork _fork;
+        private Fork _fork;
         private Fork Fork
         {
             get
@@ -26,6 +26,8 @@ namespace KVS.Forks.Core
             }
         }
 
+        private readonly ForkProvider<TDataTypesEnum> _forkProvider;
+
         public ForksWrapper(IKeyValueStore<TDataTypesEnum> keyValueStore,
             int appId, Fork fork)
         {
@@ -33,8 +35,16 @@ namespace KVS.Forks.Core
             _fork = fork ?? throw new ArgumentNullException(nameof(fork));
             _appId = appId;
 
+            _forkProvider = new ForkProvider<TDataTypesEnum>(keyValueStore, AppId, fork.Id);
+            _forkProvider.ForkChanged += _forkProvider_ForkChanged;
+
             if (!typeof(TDataTypesEnum).IsEnum)
                 throw new ArgumentException($"{nameof(TDataTypesEnum)} must be an enumerated type");
+        }
+
+        private void _forkProvider_ForkChanged(object sender, EventArgs e)
+        {
+            _fork = _forkProvider.CurrentFork;
         }
 
         private IKeyValueStore<TDataTypesEnum> _keyValueStore;
@@ -51,9 +61,9 @@ namespace KVS.Forks.Core
             if (Fork.ReadOnly)
                 return false;
 
-            KeyValueStore.Delete(type, GenerateNullKey(Fork, key), extraParams); ;
-            
-            var forkedKey = GenerateForkedKey(Fork, key);
+            KeyValueStore.Delete(type, KeyGenerator.GenerateNullKey(AppId, Fork.Id, key), extraParams); ;
+
+            var forkedKey = KeyGenerator.GenerateForkedKey(AppId, Fork.Id, key);
 
             return KeyValueStore.Set(type, forkedKey, value, extraParams);
         }
@@ -62,10 +72,10 @@ namespace KVS.Forks.Core
         {
             if (Fork.ReadOnly)
                 return false;
-            
-            KeyValueStore.Delete(type, values.Select(x => Tuple.Create(GenerateNullKey(Fork, x.Item1), x.Item3)));
-            
-            var forkedValues = values.Select(x => Tuple.Create(GenerateForkedKey(Fork, x.Item1), x.Item2, x.Item3));
+
+            KeyValueStore.Delete(type, values.Select(x => Tuple.Create(KeyGenerator.GenerateNullKey(AppId, Fork.Id, x.Item1), x.Item3)));
+
+            var forkedValues = values.Select(x => Tuple.Create(KeyGenerator.GenerateForkedKey(AppId, Fork.Id, x.Item1), x.Item2, x.Item3));
 
             return KeyValueStore.Set(type, forkedValues);
         }
@@ -76,12 +86,12 @@ namespace KVS.Forks.Core
 
             while (currentFork != null)
             {
-                var value = KeyValueStore.Get<T>(type, GenerateForkedKey(currentFork, key), extraParams);
-                
+                var value = KeyValueStore.Get<T>(type, KeyGenerator.GenerateForkedKey(AppId, currentFork.Id, key), extraParams);
+
                 if (value != null)
                     return value;
 
-                if (KeyValueStore.Exists(type, GenerateNullKey(currentFork, key),null))
+                if (KeyValueStore.Exists(type, KeyGenerator.GenerateNullKey(AppId, currentFork.Id, key), null))
                     return default(T);
 
                 currentFork = currentFork.Parent;
@@ -107,24 +117,24 @@ namespace KVS.Forks.Core
 
                 foreach (var key in missingKeys)
                 {
-                    var generatedKey = GenerateForkedKey(currentFork, key);
+                    var generatedKey = KeyGenerator.GenerateForkedKey(AppId, currentFork.Id, key);
                     keysForGet.Add(Tuple.Create(generatedKey, keysDict[key]));
                     generatedKeyToOriginalKey[generatedKey] = key;
                 }
 
                 var values = KeyValueStore.Get<T>(type, keysForGet);
-                
+
                 foreach (var key in values.Keys)
                 {
                     res[generatedKeyToOriginalKey[key]] = values[key];
                 }
 
-                missingKeys = missingKeys.Except(values.Keys.Select(x=> generatedKeyToOriginalKey[x])).ToList();
+                missingKeys = missingKeys.Except(values.Keys.Select(x => generatedKeyToOriginalKey[x])).ToList();
 
                 var nullMissingKeys = new List<string>();
                 foreach (var missingKey in missingKeys.ToList())
                 {
-                    if (KeyValueStore.Exists(type, GenerateNullKey(currentFork, missingKey), keysDict[missingKey]))
+                    if (KeyValueStore.Exists(type, KeyGenerator.GenerateNullKey(AppId, currentFork.Id, missingKey), keysDict[missingKey]))
                         nullMissingKeys.Add(missingKey);
                 }
 
@@ -141,15 +151,15 @@ namespace KVS.Forks.Core
 
         public bool Delete(TDataTypesEnum type, string key, object extraParams = null)
         {
-            var res = KeyValueStore.Delete(type, GenerateForkedKey(Fork, key), extraParams);
+            var res = KeyValueStore.Delete(type, KeyGenerator.GenerateForkedKey(AppId, Fork.Id, key), extraParams);
 
-            if (Fork.GetAllParents().Any(x => KeyValueStore.Exists(type, GenerateForkedKey(x, key), extraParams)))
-                return KeyValueStore.Set(type, GenerateNullKey(Fork, key), 0, extraParams);
+            if (Fork.GetAllParents().Any(x => KeyValueStore.Exists(type, KeyGenerator.GenerateForkedKey(AppId, x.Id, key), extraParams)))
+                return KeyValueStore.Set(type, KeyGenerator.GenerateNullKey(AppId, Fork.Id, key), 0, extraParams);
 
             return res;
         }
 
-        public bool Delete(TDataTypesEnum type, IEnumerable<Tuple<string,object>> keys)
+        public bool Delete(TDataTypesEnum type, IEnumerable<Tuple<string, object>> keys)
         {
             var success = true;
 
@@ -157,16 +167,6 @@ namespace KVS.Forks.Core
                 success = success && Delete(type, key.Item1, key.Item2);
 
             return success;
-        }
-        
-        private string GenerateForkedKey(Fork fork, string key)
-        {
-            return $"{AppId}:{fork.Id}:{key}";
-        }
-
-        private string GenerateNullKey(Fork fork, string key)
-        {
-            return $"{GenerateForkedKey(fork,key)}:KVSNull";
         }
     }
 }

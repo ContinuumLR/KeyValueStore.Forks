@@ -41,7 +41,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Entities\Fork.cs" />
+    <Compile Include="ForkProvider.cs" />
     <Compile Include="ForksWrapper.cs" />
+    <Compile Include="KeyGenerator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
