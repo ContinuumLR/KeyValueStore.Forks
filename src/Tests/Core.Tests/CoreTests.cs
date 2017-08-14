@@ -15,6 +15,7 @@ namespace Core.Tests
         public void ForksWrapper_ForkGetSetTest()
         {
             var store = new StackExchangeRedisKeyValueStore("localhost:6379");
+            store.FlushKeys("KVSF*");
             var manager = new ForksManager<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store);
             manager.CreateApp(2, "GetSetTest", string.Empty);
 
@@ -59,6 +60,7 @@ namespace Core.Tests
         public void ForksWrapper_ForkDeleteTest()
         {
             var store = new StackExchangeRedisKeyValueStore("localhost:6379");
+            store.FlushKeys("KVSF*");
             var manager = new ForksManager<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store);
             manager.CreateApp(3, "ForkDeleteTest", string.Empty);
 
@@ -86,6 +88,7 @@ namespace Core.Tests
         public void ForksManager_CreateApp()
         {
             var store = new StackExchangeRedisKeyValueStore("localhost:6379");
+            store.FlushKeys("KVSF*");
             var manager = new ForksManager<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store);
 
             manager.CreateApp(1, "test", "some test app");
