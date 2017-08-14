@@ -37,6 +37,7 @@ namespace KVS.Forks.Core
         {
             _store = store;
             _appId = appId;
+            _currentFork = ProtoBufSerializerHelper.Deserialize<Fork>(Store.Get(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, ForkId), null));
 
             InitForksDict();
 

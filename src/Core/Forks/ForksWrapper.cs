@@ -1,4 +1,5 @@
 ﻿using KVS.Forks.Core.Entities;
+using KVS.Forks.Core.Helpers;
 using KVS.Forks.Core.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -59,7 +60,9 @@ namespace KVS.Forks.Core
 
             var forkedKey = KeyGenerator.GenerateForkValueKey(AppId, Fork.Id, key);
 
-            return KeyValueStore.Set(type, forkedKey, value, extraParams);
+            var byteValue = value as byte[] ?? BinarySerializerHelper.SerializeObject(value);
+
+            return KeyValueStore.Set(type, forkedKey, byteValue, extraParams);
         }
 
         public bool Set<T>(TDataTypesEnum type, IEnumerable<Tuple<string, T, object>> values)
@@ -69,7 +72,7 @@ namespace KVS.Forks.Core
 
             KeyValueStore.Delete(type, values.Select(x => Tuple.Create(KeyGenerator.GenerateForkNullKey(AppId, Fork.Id, x.Item1), x.Item3)));
 
-            var forkedValues = values.Select(x => Tuple.Create(KeyGenerator.GenerateForkValueKey(AppId, Fork.Id, x.Item1), x.Item2, x.Item3));
+            var forkedValues = values.Select(x => Tuple.Create(KeyGenerator.GenerateForkValueKey(AppId, Fork.Id, x.Item1), x.Item2 as byte[] ?? BinarySerializerHelper.SerializeObject(x.Item2), x.Item3));
 
             return KeyValueStore.Set(type, forkedValues);
         }
@@ -80,10 +83,15 @@ namespace KVS.Forks.Core
 
             while (currentFork != null)
             {
-                var value = KeyValueStore.Get<T>(type, KeyGenerator.GenerateForkValueKey(AppId, currentFork.Id, key), extraParams);
+                var byteValue = KeyValueStore.Get(type, KeyGenerator.GenerateForkValueKey(AppId, currentFork.Id, key), extraParams);
 
-                if (value != null)
-                    return value;
+                if (byteValue != null)
+                {
+                    if (typeof(T) == typeof(byte[]))
+                        return (T)Convert.ChangeType(byteValue, typeof(T));
+
+                    return (T)BinarySerializerHelper.DeserializeObject(byteValue);
+                }
 
                 if (KeyValueStore.Exists(type, KeyGenerator.GenerateForkNullKey(AppId, currentFork.Id, key), null))
                     return default(T);
@@ -116,14 +124,20 @@ namespace KVS.Forks.Core
                     generatedKeyToOriginalKey[generatedKey] = key;
                 }
 
-                var values = KeyValueStore.Get<T>(type, keysForGet);
+                var byteValues = KeyValueStore.Get(type, keysForGet);
 
-                foreach (var key in values.Keys)
+                if (typeof(T) == typeof(byte[]))
                 {
-                    res[generatedKeyToOriginalKey[key]] = values[key];
+                    foreach (var key in byteValues.Keys)
+                        res[generatedKeyToOriginalKey[key]] = (T)Convert.ChangeType(byteValues[key], typeof(T));
                 }
-
-                missingKeys = missingKeys.Except(values.Keys.Select(x => generatedKeyToOriginalKey[x])).ToList();
+                else
+                {
+                    foreach (var key in byteValues.Keys)
+                        res[generatedKeyToOriginalKey[key]] = (T)BinarySerializerHelper.DeserializeObject(byteValues[key]);
+                }
+                
+                missingKeys = missingKeys.Except(byteValues.Keys.Select(x => generatedKeyToOriginalKey[x])).ToList();
 
                 var nullMissingKeys = new List<string>();
                 foreach (var missingKey in missingKeys.ToList())
@@ -151,7 +165,7 @@ namespace KVS.Forks.Core
             var res = KeyValueStore.Delete(type, KeyGenerator.GenerateForkValueKey(AppId, Fork.Id, key), extraParams);
 
             if (Fork.GetAllParents().Any(x => KeyValueStore.Exists(type, KeyGenerator.GenerateForkValueKey(AppId, x.Id, key), extraParams)))
-                return KeyValueStore.Set(type, KeyGenerator.GenerateForkNullKey(AppId, Fork.Id, key), 0, extraParams);
+                return KeyValueStore.Set(type, KeyGenerator.GenerateForkNullKey(AppId, Fork.Id, key), BinarySerializerHelper.SerializeObject(type), extraParams);
 
             return res;
         }
