@@ -8,22 +8,24 @@ Using the console tool - create app, choose your key value store implementation 
 # Completed features
 * StackExchange.Redis wrapper implemetation for Set/Get with String/Hash data types
 * Set/Get ForkWrapper based on forks, currently a parent fork is Readonly while leaf forks are not.
-
-# Missing first version features
 * Delete - apis
-* Areas
 * ForkWrapper
   * Fork provider + Grace period, timestamp outside the fork, locking while replacing
 * Fork Management (apis)
   * Create app - creates master fork. (Use ZeroFormatter)
   * Create (fork, not maser)-  (Use ZeroFormatter)
-  * Grace period (With adding forks)
+    * Grace period (With adding forks)
   * Delete - only when no children, flush all keys
   * Merge - only update keys, the target mustn’t have children
-    * Merge by area
+  
+# Missing first version features
+
+* Areas
+* Fork Management (apis)
+  * Merge by area
   * Prune old forks
   * Select forks
-  * Set readonly (part of create too)
+  * Set Readonly
 * Console Tool
 
 # Future features
