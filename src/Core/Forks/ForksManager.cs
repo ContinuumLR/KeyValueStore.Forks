@@ -104,7 +104,7 @@ namespace KVS.Forks.Core
                 Name = "master"
             };
 
-            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), forkIds, null);
+            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), BinarySerializerHelper.SerializeObject(forkIds), null);
             SetFork(masterFork);
         }
 
@@ -132,13 +132,12 @@ namespace KVS.Forks.Core
             SetFork(newFork);
             SetFork(parentFork);
 
-
-            Task.Factory.StartNew(() => HandleGracePeriod(newFork), TaskCreationOptions.LongRunning);
+            HandleGracePeriod(newFork);
         }
 
         private void HandleGracePeriod(ForkRawData newFork)
         {
-            //Thread.Sleep(TimeSpan.FromSeconds(10));
+            Thread.Sleep(TimeSpan.FromSeconds(1));
             var fork = GetFork(newFork.Id);
             fork.IsInGracePeriod = false;
 
@@ -184,10 +183,10 @@ namespace KVS.Forks.Core
             var valuesToSet = new List<Tuple<string, TDataTypesEnum, byte[], object>>();
             var keysToDelete = new Dictionary<string, TDataTypesEnum>();
 
-            var currentFork = GetFork(originForkId);
-            var targetFork = GetFork(targetForkId);
+            var currentFork = ForkProvider.GetFork(originForkId);
+            var targetFork = ForkProvider.GetFork(targetForkId);
 
-            while(!IsCommonParent(currentFork, targetFork))
+            while (!IsCommonParent(currentFork, targetFork))
             {
                 var forkPattern = KeyGenerator.GenerateForkValuePattern(AppId, currentFork.Id);
                 var keys = KeyValueStore.Keys($"{forkPattern}*");
@@ -203,7 +202,7 @@ namespace KVS.Forks.Core
                     if (originalKey.EndsWith(KeyGenerator.NullKeyPostFix))
                     {
                         var type = (TDataTypesEnum)BinarySerializerHelper.DeserializeObject(KeyValueStore.Get(KeyValueStore.DefaultType, key, null));
-                        keysToDelete.Add(originalKey.Substring(0,originalKey.Length - KeyGenerator.NullKeyPostFix.Length), type);
+                        keysToDelete.Add(originalKey.Substring(0, originalKey.Length - KeyGenerator.NullKeyPostFix.Length), type);
                     }
                     else
                     {
@@ -240,14 +239,14 @@ namespace KVS.Forks.Core
         {
             var currentFork = targetFork;
 
-            while(currentFork != null)
+            while (currentFork != null)
             {
                 if (currentFork.Id == fork.Id)
                     return true;
 
                 currentFork = currentFork.Parent;
             }
-            
+
             return false;
         }
 

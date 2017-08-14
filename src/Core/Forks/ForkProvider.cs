@@ -37,7 +37,6 @@ namespace KVS.Forks.Core
         {
             _store = store;
             _appId = appId;
-            _currentFork = ProtoBufSerializerHelper.Deserialize<Fork>(Store.Get(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, ForkId), null));
 
             InitForksDict();
 
@@ -48,11 +47,11 @@ namespace KVS.Forks.Core
         private void InitForksDict()
         {
             var rawForks = new Dictionary<int, ForkRawData>();
-            var forkIds = Store.Get<List<int>>(Store.DefaultType, KeyGenerator.GenerateForksKey(AppId), null);
+            var forkIds = (List<int>)BinarySerializerHelper.DeserializeObject(Store.Get(Store.DefaultType, KeyGenerator.GenerateForksKey(AppId), null));
             foreach (var forkId in forkIds)
             {
-                rawForks[forkId] = ProtoBufSerializerHelper.Deserialize<ForkRawData>(Store.Get<byte[]>(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, forkId), null));
-                _forksTimeStamps[forkId] = Store.Get<DateTime>(Store.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, forkId), null);
+                rawForks[forkId] = ProtoBufSerializerHelper.Deserialize<ForkRawData>(Store.Get(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, forkId), null));
+                _forksTimeStamps[forkId] = (DateTime)BinarySerializerHelper.DeserializeObject(Store.Get(Store.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, forkId), null));
             }
 
             CreateFork(rawForks, 1);
@@ -87,7 +86,7 @@ namespace KVS.Forks.Core
         }
 
         private AutoResetEvent _updateFork = new AutoResetEvent(false);
-        private TimeSpan _updateForkInterval = TimeSpan.FromSeconds(10);
+        private TimeSpan _updateForkInterval = TimeSpan.FromSeconds(1);
 
         public Fork GetFork(int forkId)
         {
@@ -114,7 +113,7 @@ namespace KVS.Forks.Core
         {
             foreach (var forkId in _forks.Keys.ToList())
             {
-                var newTimeStamp = Store.Get<DateTime>(Store.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, forkId), null);
+                var newTimeStamp = (DateTime)BinarySerializerHelper.DeserializeObject(Store.Get(Store.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, forkId), null));
                 var _currentForkTimeStamp = _forksTimeStamps[forkId];
                 if (newTimeStamp == default(DateTime))
                 {
@@ -124,7 +123,7 @@ namespace KVS.Forks.Core
                 {
                     if (newTimeStamp > _currentForkTimeStamp)
                     {
-                        var rawFork = ProtoBufSerializerHelper.Deserialize<ForkRawData>(Store.Get<byte[]>(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, forkId), null));
+                        var rawFork = ProtoBufSerializerHelper.Deserialize<ForkRawData>(Store.Get(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, forkId), null));
                         _forksTimeStamps[forkId] = newTimeStamp;
 
                         var fork = _forks[forkId];
@@ -134,7 +133,7 @@ namespace KVS.Forks.Core
                             var newForksIds = rawFork.ChildrenIds.Except(fork.Children.Select(x => x.Id)).ToList();
                             foreach (var newForkId in newForksIds)
                             {
-                                var rawChildFork = ProtoBufSerializerHelper.Deserialize<ForkRawData>(Store.Get<byte[]>(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, newForkId), null));
+                                var rawChildFork = ProtoBufSerializerHelper.Deserialize<ForkRawData>(Store.Get(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, newForkId), null));
                                 var newFork = new Fork
                                 {
                                     Id = newForkId,
@@ -144,6 +143,7 @@ namespace KVS.Forks.Core
                                     Parent = fork
                                 };
                                 _forks[newForkId] = newFork;
+                                _forksTimeStamps[newForkId] = newTimeStamp;
                             }
                         }
 

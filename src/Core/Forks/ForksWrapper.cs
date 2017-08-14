@@ -19,7 +19,7 @@ namespace KVS.Forks.Core
                 return _appId;
             }
         }
-        private readonly int _forkId;
+
         private readonly ForkProvider<TDataTypesEnum> _forkProvider;
 
         public ForksWrapper(IKeyValueStore<TDataTypesEnum> keyValueStore,
@@ -38,8 +38,8 @@ namespace KVS.Forks.Core
 
         private void _forkProvider_ForkChanged(object sender, ForkChangedEventArgs e)
         {
-            if(e.ForkId == _forkId)
-                Fork = _forkProvider.GetFork(_forkId);
+            if(e.ForkId == Fork.Id)
+                Fork = _forkProvider.GetFork(Fork.Id);
         }
 
         private IKeyValueStore<TDataTypesEnum> _keyValueStore;

@@ -109,7 +109,11 @@ namespace Core.Tests
         public void ForksManager_Merge()
         {
             var store = new StackExchangeRedisKeyValueStore("localhost:6379");
+
+            store.FlushKeys("KVSF*");
+
             var manager = new ForksManager<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store);
+
 
             manager.CreateApp(2, "test", "some test app");
 
