@@ -26,7 +26,7 @@ namespace KVS.Forks.Core.Entities
         {
             get
             {
-                return Children == null || Children.Count == 0;
+                return Children != null && Children.Count > 0;
             }
         }
         

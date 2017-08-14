@@ -117,7 +117,7 @@ namespace KVS.Forks.Core
         {
             if (parentForkId == 0) throw new ArgumentNullException(nameof(parentForkId));
 
-            var parentForkData = KeyValueStore.Get<byte[]>(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId,parentForkId), null);
+            var parentForkData = KeyValueStore.Get<byte[]>(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId, parentForkId), null);
 
             if (parentForkData == null)
                 throw new ArgumentException($"{parentForkId} doesn't reference actual fork");
@@ -125,14 +125,14 @@ namespace KVS.Forks.Core
             var parentFork = ProtoBufSerializerHelper.Deserialize<Fork>(parentForkData);
 
             var forkIds = KeyValueStore.Get<List<int>>(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), null);
-            
+
             if (forkIds.Contains(id))
                 throw new ArgumentException(nameof(id));
 
             forkIds.Add(id);
 
             KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), forkIds, null);
-            
+
             var newFork = new Fork
             {
                 Id = id,
@@ -151,7 +151,7 @@ namespace KVS.Forks.Core
             KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, id), DateTime.UtcNow, null);
             KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, parentFork.Id), DateTime.UtcNow, null);
         }
-        
+
         public ForksWrapper<TDataTypesEnum> GetWrapper(int forkId)
         {
             return new ForksWrapper<TDataTypesEnum>(KeyValueStore, AppId, forkId);

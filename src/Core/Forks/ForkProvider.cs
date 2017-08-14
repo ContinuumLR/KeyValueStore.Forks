@@ -44,12 +44,12 @@ namespace KVS.Forks.Core
             _store = store;
             _forkId = forkId;
             _appId = appId;
-
-            Task.Factory.StartNew(() => UpdateCurrentFork(), TaskCreationOptions.LongRunning);
+            UpdateCurrentFork();
+            Task.Factory.StartNew(() => DoWork(), TaskCreationOptions.LongRunning);
         }
 
         private AutoResetEvent _updateFork = new AutoResetEvent(false);
-        private TimeSpan _updateForkInterval = TimeSpan.FromMilliseconds(10);
+        private TimeSpan _updateForkInterval = TimeSpan.FromSeconds(10);
 
         private DateTime _currentForkTimeStamp = DateTime.MinValue;
         private Fork _currentFork;
@@ -61,20 +61,24 @@ namespace KVS.Forks.Core
             }
         }
 
-        private void UpdateCurrentFork()
+        private void DoWork()
         {
             while (true)
             {
-                var newTimeStamp = Store.Get<DateTime>(Store.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, ForkId), null);
-                
-                if (newTimeStamp > _currentForkTimeStamp)
-                {
-                    _currentFork = ProtoBufSerializerHelper.Deserialize<Fork>(Store.Get<byte[]>(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, ForkId), null));
-                    _currentForkTimeStamp = newTimeStamp;
-                    RaiseForkChanged();
-                }
-
+                UpdateCurrentFork();
                 _updateFork.WaitOne(_updateForkInterval);
+            }
+        }
+
+        private void UpdateCurrentFork()
+        {
+            var newTimeStamp = Store.Get<DateTime>(Store.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, ForkId), null);
+
+            if (newTimeStamp > _currentForkTimeStamp)
+            {
+                _currentFork = ProtoBufSerializerHelper.Deserialize<Fork>(Store.Get<byte[]>(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, ForkId), null));
+                _currentForkTimeStamp = newTimeStamp;
+                RaiseForkChanged();
             }
         }
 
