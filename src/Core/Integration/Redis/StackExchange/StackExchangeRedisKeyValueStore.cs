@@ -217,6 +217,30 @@ namespace KVS.Forks.Core.Redis.StackExchange
             return false;
         }
 
+        /// <summary>
+        /// Delete all keys in the store matching the pattern
+        /// </summary>
+        /// <param name="pattern"></param>
+        /// <returns></returns>
+        public bool FlushKeys(string pattern)
+        {
+            try
+            {
+                var db = _redis.GetDatabase();
+
+                //Delete all keys matching the pattern
+                var deletionScript = $"local keys = redis.call('keys', '{pattern}') \n for i = 1,#keys,5000 do \n redis.call('del', unpack(keys, i, math.min(i+4999, #keys))) \n end \n return keys";
+                var preparedScript = LuaScript.Prepare(deletionScript);
+                db.ScriptEvaluate(preparedScript);
+            }
+            catch
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         public enum StackExchangeRedisDataTypesEnum
         {
             String,

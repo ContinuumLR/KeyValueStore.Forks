@@ -99,7 +99,9 @@ namespace Core.Tests
             manager.CreateFork(3, "test3", "some test fork", 1);
             manager.CreateFork(4, "test4", "some test fork", 2);
 
-            Thread.Sleep(1000);
+            manager.DeleteFork(4);
+            manager.DeleteFork(3);
+            manager.DeleteFork(2);
         }
     }
 }

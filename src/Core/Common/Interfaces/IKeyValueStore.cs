@@ -15,6 +15,7 @@ namespace KVS.Forks.Core.Interfaces
         bool Delete(TDataTypesEnum type, string key, object extraParams);
         bool Delete(TDataTypesEnum type, IEnumerable<Tuple<string, object>> keys);
         bool Exists(TDataTypesEnum type, string key, object extraParams);
+        bool FlushKeys(string pattern);
 
         TDataTypesEnum DefaultType { get; }
     }
