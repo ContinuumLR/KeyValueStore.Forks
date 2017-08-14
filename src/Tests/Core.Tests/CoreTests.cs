@@ -19,15 +19,15 @@ namespace Core.Tests
             var manager = new ForksManager<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store);
             manager.CreateApp(2, "GetSetTest", string.Empty);
 
-            manager.CreateFork(2, "test1", "some test fork", 1);
-            var wrapper = manager.GetWrapper(2);
+            var forkId = manager.CreateFork("test1", "some test fork", 1);
+            var wrapper = manager.GetWrapper(forkId);
             
             wrapper.StringSet(new List<KeyValuePair<string, int>> { new KeyValuePair<string,int>("testKey1", 1),
                 new KeyValuePair<string, int>("testKey2", 2) }.ToArray());
 
-            manager.CreateFork(3, "test2", "some test fork", 2);
+            forkId = manager.CreateFork("test2", "some test fork", 2);
                         
-            wrapper = manager.GetWrapper(3);
+            wrapper = manager.GetWrapper(forkId);
             wrapper.StringSet("testKey3", 3);
             var res = wrapper.StringGet<int>(new string[] { "testKey1", "testKey2", "testKey3" });
 
@@ -36,9 +36,9 @@ namespace Core.Tests
             Assert.AreEqual(3, res["testKey3"]);
             Assert.AreEqual(3, res.Count);
 
-            manager.CreateFork(4, "test3", "some test fork", 2);
+            forkId = manager.CreateFork("test3", "some test fork", 2);
 
-            wrapper = manager.GetWrapper(4);
+            wrapper = manager.GetWrapper(forkId);
             wrapper.StringSet("testKey3", 3);
             res = wrapper.StringGet<int>(new string[] { "testKey1", "testKey2", "testKey3" });
 
@@ -47,8 +47,8 @@ namespace Core.Tests
             Assert.AreEqual(3, res["testKey3"]);
             Assert.AreEqual(3, res.Count);
 
-            manager.CreateFork(5, "test4", "some test fork", 2);
-            wrapper = manager.GetWrapper(5);
+            forkId = manager.CreateFork("test4", "some test fork", 2);
+            wrapper = manager.GetWrapper(forkId);
             res = wrapper.StringGet<int>(new string[] { "testKey1", "testKey2", "testKey3" });
 
             Assert.AreEqual(1, res["testKey1"]);
@@ -64,15 +64,15 @@ namespace Core.Tests
             var manager = new ForksManager<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store);
             manager.CreateApp(3, "ForkDeleteTest", string.Empty);
 
-            manager.CreateFork(2, "test1", "some test fork", 1);
+            var forkId = manager.CreateFork("test1", "some test fork", 1);
 
-            var wrapper = manager.GetWrapper(2);
+            var wrapper = manager.GetWrapper(forkId);
 
             wrapper.StringSet(new List<KeyValuePair<string, int>> { new KeyValuePair<string,int>("testKey1", 1),
                 new KeyValuePair<string, int>("testKey2", 2) }.ToArray());
 
-            manager.CreateFork(3, "test2", "some test fork", 2);
-            wrapper = manager.GetWrapper(3);
+            forkId = manager.CreateFork("test2", "some test fork", 2);
+            wrapper = manager.GetWrapper(forkId);
             wrapper.StringSet("testKey3", 3);
             wrapper.StringSet("testKey2", 4);
 
@@ -95,16 +95,16 @@ namespace Core.Tests
 
             var masterWrapper = manager.GetWrapper(1);
 
-            manager.CreateFork(2, "test2", "some test fork", 1);
+            var forkId = manager.CreateFork("test2", "some test fork", 1);
 
             manager.GetWrapper(2);
 
-            manager.CreateFork(3, "test3", "some test fork", 1);
-            manager.CreateFork(4, "test4", "some test fork", 2);
+            var forkId2 = manager.CreateFork("test3", "some test fork", 1);
+            var forkId3 = manager.CreateFork("test4", "some test fork", 2);
 
-            manager.DeleteFork(4);
-            manager.DeleteFork(3);
-            manager.DeleteFork(2);
+            manager.DeleteFork(forkId3);
+            manager.DeleteFork(forkId2);
+            manager.DeleteFork(forkId);
         }
 
 
@@ -116,36 +116,35 @@ namespace Core.Tests
             store.FlushKeys("KVSF*");
 
             var manager = new ForksManager<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store);
-
-
+            
             manager.CreateApp(2, "test", "some test app");
 
             var wrapper = manager.GetWrapper(1);
             wrapper.StringSet("1", 1);
 
-            manager.CreateFork(2, "test2", "some test fork", 1);
-            wrapper = manager.GetWrapper(2);
+            var forkId = manager.CreateFork("test2", "some test fork", 1);
+            wrapper = manager.GetWrapper(forkId);
             wrapper.StringSet("2", 2);
             wrapper.StringSet("3", 3);
             wrapper.StringSet("4", 4);
 
-            manager.CreateFork(3, "test2", "some test fork", 2);
-            wrapper = manager.GetWrapper(3);
+            forkId = manager.CreateFork("test2", "some test fork", 2);
+            wrapper = manager.GetWrapper(forkId);
 
             wrapper.KeyDelete("2");
             wrapper.StringSet("3", 4);
             wrapper.StringSet("5", 5);
 
-            manager.CreateFork(21, "test2", "some test fork", 2);
-            wrapper = manager.GetWrapper(21);
+            var forkId2 = manager.CreateFork("test2", "some test fork", 2);
+            wrapper = manager.GetWrapper(forkId2);
 
             wrapper.KeyDelete("3");
             wrapper.StringSet("2", 2);
             wrapper.StringSet("6", 6);
             wrapper.StringSet("5", 4);
 
-            manager.MergeFork(3, 21);
-            wrapper = manager.GetWrapper(100);
+            var newForkId = manager.MergeFork(forkId, forkId2);
+            wrapper = manager.GetWrapper(newForkId);
 
             var values = wrapper.StringGet<int>(new string[] { "1", "2", "3", "4", "5", "6" });
 

@@ -104,25 +104,24 @@ namespace KVS.Forks.Core
                 Name = "master"
             };
 
-            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), BinarySerializerHelper.SerializeObject(forkIds), null);
+            SetForkIds(forkIds);
             SetFork(masterFork);
         }
 
-        public void CreateFork(int id, string name, string description, int parentForkId)
+        public int CreateFork(string name, string description, int parentForkId)
         {
             var parentFork = GetFork(parentForkId);
 
             var forkIds = GetForkIds();
 
-            if (forkIds.Contains(id))
-                throw new ArgumentException(nameof(id));
-
-            forkIds.Add(id);
+            var newId = forkIds.Max() + 1;
+            
+            forkIds.Add(newId);
             SetForkIds(forkIds);
 
             var newFork = new ForkRawData
             {
-                Id = id,
+                Id = newId,
                 Name = name,
                 Description = description,
                 ParentId = parentFork.Id,
@@ -133,6 +132,8 @@ namespace KVS.Forks.Core
             SetFork(parentFork);
 
             HandleGracePeriod(newFork);
+
+            return newId;
         }
 
         private void HandleGracePeriod(ForkRawData newFork)
@@ -220,9 +221,9 @@ namespace KVS.Forks.Core
                 currentFork = currentFork.Parent;
             }
 
-            CreateFork(100, $"{targetFork.Name} Merge", "", targetFork.Id);
+            var newForkId = CreateFork($"{targetFork.Name} Merge", "", targetFork.Id);
 
-            var wrapper = GetWrapper(100);
+            var wrapper = GetWrapper(newForkId);
 
             foreach (var keyToDelete in keysToDelete)
                 wrapper.Delete(keyToDelete.Value, keyToDelete.Key);
@@ -232,7 +233,7 @@ namespace KVS.Forks.Core
                 wrapper.Set(value.Item2, value.Item1, value.Item3, value.Item4);
             }
 
-            return 100;
+            return newForkId;
         }
 
         private bool IsCommonParent(Fork fork, Fork targetFork)
