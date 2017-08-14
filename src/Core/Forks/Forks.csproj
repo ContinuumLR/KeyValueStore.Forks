@@ -45,6 +45,7 @@
   <ItemGroup>
     <Compile Include="Entities\App.cs" />
     <Compile Include="Entities\Fork.cs" />
+    <Compile Include="Entities\ForkRawData.cs" />
     <Compile Include="ForksManager.cs" />
     <Compile Include="ForkProvider.cs" />
     <Compile Include="ForksWrapper.cs" />

@@ -12,14 +12,8 @@ namespace KVS.Forks.Core
 {
     public class ForkProvider<TDataTypesEnum>
     {
-        private readonly int _forkId;
-        private int ForkId
-        {
-            get
-            {
-                return _forkId;
-            }
-        }
+        private Dictionary<int, DateTime> _forksTimeStamps = new Dictionary<int, DateTime>();
+        private Dictionary<int, Fork> _forks = new Dictionary<int, Fork>();
 
         private readonly int _appId;
         public int AppId
@@ -39,54 +33,135 @@ namespace KVS.Forks.Core
             }
         }
 
-        public ForkProvider(IKeyValueStore<TDataTypesEnum> store, int appId, int forkId)
+        public ForkProvider(IKeyValueStore<TDataTypesEnum> store, int appId)
         {
             _store = store;
-            _forkId = forkId;
             _appId = appId;
-            UpdateCurrentFork();
+
+            InitForksDict();
+
+            UpdateForks();
             Task.Factory.StartNew(() => DoWork(), TaskCreationOptions.LongRunning);
+        }
+
+        private void InitForksDict()
+        {
+            var rawForks = new Dictionary<int, ForkRawData>();
+            var forkIds = Store.Get<List<int>>(Store.DefaultType, KeyGenerator.GenerateForksKey(AppId), null);
+            foreach (var forkId in forkIds)
+            {
+                rawForks[forkId] = ProtoBufSerializerHelper.Deserialize<ForkRawData>(Store.Get<byte[]>(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, forkId), null));
+                _forksTimeStamps[forkId] = Store.Get<DateTime>(Store.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, forkId), null);
+            }
+
+            CreateFork(rawForks, 1);
+        }
+
+        private void CreateFork(Dictionary<int, ForkRawData> rawForks, int forkId)
+        {
+            var forkRawData = rawForks[forkId];
+            var res = new Fork { Id = forkRawData.Id };
+
+            UpdateFork(res, forkRawData);
+
+            _forks[forkRawData.Id] = res;
+
+            if (forkRawData.ParentId != 0)
+            {
+                if (!_forks.ContainsKey(forkRawData.ParentId))
+                {
+                    CreateFork(rawForks, forkRawData.ParentId);
+                }
+                res.Parent = _forks[forkRawData.ParentId];
+            }
+
+            foreach (var childId in forkRawData.ChildrenIds)
+            {
+                if (!_forks.ContainsKey(childId))
+                {
+                    CreateFork(rawForks, childId);
+                }
+                res.Children.Add(_forks[childId]);
+            }
         }
 
         private AutoResetEvent _updateFork = new AutoResetEvent(false);
         private TimeSpan _updateForkInterval = TimeSpan.FromSeconds(10);
 
-        private DateTime _currentForkTimeStamp = DateTime.MinValue;
-        private Fork _currentFork;
-        public Fork CurrentFork
+        public Fork GetFork(int forkId)
         {
-            get
-            {
-                return _currentFork;
-            }
+            return _forks[forkId];
+        }
+
+        private void UpdateFork(Fork forkToUpdate, ForkRawData forkRawData)
+        {
+            forkToUpdate.Name = forkRawData.Name;
+            forkToUpdate.Description = forkRawData.Description;
+            forkToUpdate.IsInGracePeriod = forkRawData.IsInGracePeriod;
         }
 
         private void DoWork()
         {
             while (true)
             {
-                UpdateCurrentFork();
+                UpdateForks();
                 _updateFork.WaitOne(_updateForkInterval);
             }
         }
 
-        private void UpdateCurrentFork()
+        private void UpdateForks()
         {
-            var newTimeStamp = Store.Get<DateTime>(Store.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, ForkId), null);
-
-            if (newTimeStamp > _currentForkTimeStamp)
+            foreach (var forkId in _forks.Keys.ToList())
             {
-                _currentFork = ProtoBufSerializerHelper.Deserialize<Fork>(Store.Get<byte[]>(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, ForkId), null));
-                _currentForkTimeStamp = newTimeStamp;
-                RaiseForkChanged();
+                var newTimeStamp = Store.Get<DateTime>(Store.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, forkId), null);
+                var _currentForkTimeStamp = _forksTimeStamps[forkId];
+                if (newTimeStamp == default(DateTime))
+                {
+                    _forks.Remove(forkId);
+                }
+                else
+                {
+                    if (newTimeStamp > _currentForkTimeStamp)
+                    {
+                        var rawFork = ProtoBufSerializerHelper.Deserialize<ForkRawData>(Store.Get<byte[]>(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, forkId), null));
+                        _forksTimeStamps[forkId] = newTimeStamp;
+
+                        var fork = _forks[forkId];
+
+                        if (fork.Children.Count != rawFork.ChildrenIds.Count)
+                        {
+                            var newForksIds = rawFork.ChildrenIds.Except(fork.Children.Select(x => x.Id)).ToList();
+                            foreach (var newForkId in newForksIds)
+                            {
+                                var rawChildFork = ProtoBufSerializerHelper.Deserialize<ForkRawData>(Store.Get<byte[]>(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, newForkId), null));
+                                var newFork = new Fork
+                                {
+                                    Id = newForkId,
+                                    Name = rawChildFork.Name,
+                                    Description = rawChildFork.Description,
+                                    IsInGracePeriod = rawChildFork.IsInGracePeriod,
+                                    Parent = fork
+                                };
+                                _forks[newForkId] = newFork;
+                            }
+                        }
+
+                        UpdateFork(fork, rawFork);
+                        RaiseForkChanged(forkId);
+                    }
+                }
             }
         }
 
-        protected void RaiseForkChanged()
+        protected void RaiseForkChanged(int forkId)
         {
-            ForkChanged?.Invoke(this, new EventArgs());
+            ForkChanged?.Invoke(this, new ForkChangedEventArgs { ForkId = forkId });
         }
 
-        public event EventHandler<EventArgs> ForkChanged;
+        public event EventHandler<ForkChangedEventArgs> ForkChanged;
+    }
+    public class ForkChangedEventArgs : EventArgs
+    {
+        public int ForkId { get; set; }
     }
 }

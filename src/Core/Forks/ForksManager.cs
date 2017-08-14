@@ -17,32 +17,19 @@ namespace KVS.Forks.Core
     /// <typeparam name="TDataTypesEnum"></typeparam>
     public class ForksManager<TDataTypesEnum>
     {
-        private IKeyValueStore<TDataTypesEnum> _keyValueStore;
-        public IKeyValueStore<TDataTypesEnum> KeyValueStore
-        {
-            get
-            {
-                return _keyValueStore;
-            }
-        }
+        public IKeyValueStore<TDataTypesEnum> KeyValueStore { get; private set; }
+        public ForkProvider<TDataTypesEnum> ForkProvider { get; private set; }
 
-        private int _appId;
-        public int AppId
-        {
-            get
-            {
-                return _appId;
-            }
-        }
+        public int AppId { get; private set; }
 
         public ForksManager(IKeyValueStore<TDataTypesEnum> keyValueStore)
         {
-            _keyValueStore = keyValueStore ?? throw new ArgumentNullException(nameof(keyValueStore));
+            KeyValueStore = keyValueStore ?? throw new ArgumentNullException(nameof(keyValueStore));
         }
 
         public ForksManager(IKeyValueStore<TDataTypesEnum> keyValueStore, int appId)
         {
-            _keyValueStore = keyValueStore ?? throw new ArgumentNullException(nameof(keyValueStore));
+            KeyValueStore = keyValueStore ?? throw new ArgumentNullException(nameof(keyValueStore));
 
             SetApp(appId);
         }
@@ -58,7 +45,7 @@ namespace KVS.Forks.Core
 
             //Check if app exists
 
-            _appId = appId;
+            AppId = appId;
         }
 
         /// <summary>
@@ -97,6 +84,8 @@ namespace KVS.Forks.Core
             SetApp(appId);
 
             CreateMasterFork();
+
+            ForkProvider = new ForkProvider<TDataTypesEnum>(KeyValueStore, AppId);
         }
 
         private void CreateMasterFork()
@@ -104,14 +93,14 @@ namespace KVS.Forks.Core
             var forkIds = new List<int>();
             forkIds.Add(1);
 
-            var masterFork = new Fork
+            var masterFork = new ForkRawData
             {
                 Id = 1,
                 Name = "master"
             };
 
             KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), forkIds, null);
-            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId, 1), ProtoBufSerializerHelper.Serialize(masterFork), null);
+            SetFork(masterFork);
         }
 
         public void CreateFork(int id, string name, string description, int parentForkId)
@@ -119,25 +108,38 @@ namespace KVS.Forks.Core
             var parentFork = GetFork(parentForkId);
 
             var forkIds = GetForkIds();
-            
+
             if (forkIds.Contains(id))
                 throw new ArgumentException(nameof(id));
 
             forkIds.Add(id);
             SetForkIds(forkIds);
 
-            var newFork = new Fork
+            var newFork = new ForkRawData
             {
                 Id = id,
                 Name = name,
                 Description = description,
-                Parent = parentFork
+                ParentId = parentFork.Id,
+                IsInGracePeriod = true
             };
-            parentFork.Children.Add(newFork);
+            parentFork.ChildrenIds.Add(newFork.Id);
             SetFork(newFork);
             SetFork(parentFork);
+
+
+            Task.Factory.StartNew(() => HandleGracePeriod(newFork), TaskCreationOptions.LongRunning);
         }
-        
+
+        private void HandleGracePeriod(ForkRawData newFork)
+        {
+            //Thread.Sleep(TimeSpan.FromSeconds(10));
+            var fork = GetFork(newFork.Id);
+            fork.IsInGracePeriod = false;
+
+            SetFork(fork);
+        }
+
         public bool DeleteFork(int id)
         {
             var forkIds = GetForkIds();
@@ -145,15 +147,16 @@ namespace KVS.Forks.Core
             if (!forkIds.Contains(id))
                 throw new ArgumentException(nameof(id));
 
-            var fork = GetFork(id) ;
+            var fork = GetFork(id);
 
             if (fork.ReadOnly)
                 return false;
-            
-            if (fork.Parent != null)
+
+            if (fork.ParentId != 0)
             {
-                fork.Parent.Children.Remove(fork);
-                SetFork(fork.Parent);
+                var parent = GetFork(fork.ParentId);
+                parent.ChildrenIds.Remove(fork.Id);
+                SetFork(parent);
             }
 
             forkIds.Remove(fork.Id);
@@ -174,7 +177,7 @@ namespace KVS.Forks.Core
             KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), forkIds, null);
         }
 
-        private Fork GetFork(int id)
+        private ForkRawData GetFork(int id)
         {
             if (id == 0) throw new ArgumentNullException(nameof(id));
 
@@ -183,11 +186,11 @@ namespace KVS.Forks.Core
             if (forkData == null)
                 throw new ArgumentException($"Fork id:{id} doesn't reference actual fork");
 
-            return ProtoBufSerializerHelper.Deserialize<Fork>(forkData);
+            return ProtoBufSerializerHelper.Deserialize<ForkRawData>(forkData);
 
         }
 
-        private void SetFork(Fork fork)
+        private void SetFork(ForkRawData fork)
         {
             KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId, fork.Id), ProtoBufSerializerHelper.Serialize(fork), null);
             KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, fork.Id), DateTime.UtcNow, null);

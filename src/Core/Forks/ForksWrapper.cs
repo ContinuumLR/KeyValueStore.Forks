@@ -18,7 +18,7 @@ namespace KVS.Forks.Core
                 return _appId;
             }
         }
-
+        private readonly int _forkId;
         private readonly ForkProvider<TDataTypesEnum> _forkProvider;
 
         public ForksWrapper(IKeyValueStore<TDataTypesEnum> keyValueStore,
@@ -30,14 +30,15 @@ namespace KVS.Forks.Core
             if (!typeof(TDataTypesEnum).IsEnum)
                 throw new ArgumentException($"{nameof(TDataTypesEnum)} must be an enumerated type");
 
-            _forkProvider = new ForkProvider<TDataTypesEnum>(keyValueStore, AppId, forkId);
+            _forkProvider = new ForkProvider<TDataTypesEnum>(keyValueStore, AppId);
+            Fork = _forkProvider.GetFork(forkId);
             _forkProvider.ForkChanged += _forkProvider_ForkChanged;
-            Fork = _forkProvider.CurrentFork;
         }
 
-        private void _forkProvider_ForkChanged(object sender, EventArgs e)
+        private void _forkProvider_ForkChanged(object sender, ForkChangedEventArgs e)
         {
-            Fork = _forkProvider.CurrentFork;
+            if(e.ForkId == _forkId)
+                Fork = _forkProvider.GetFork(_forkId);
         }
 
         private IKeyValueStore<TDataTypesEnum> _keyValueStore;
