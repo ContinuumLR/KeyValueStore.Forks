@@ -8,6 +8,10 @@ namespace KVS.Forks.Core
 {
     public class KeyGenerator
     {
+        public static string GenerateForkPattern(int appId, int forkId)
+        {
+            return $"KVSF:{appId}:F:{forkId}*";
+        }
         public static string GenerateForkValueKey(int appId, int forkId, string key)
         {
             return $"KVSF:{appId}:F:{forkId}:{key}";

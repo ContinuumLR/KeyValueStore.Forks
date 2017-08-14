@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace KVS.Forks.Core
@@ -115,24 +116,16 @@ namespace KVS.Forks.Core
 
         public void CreateFork(int id, string name, string description, int parentForkId)
         {
-            if (parentForkId == 0) throw new ArgumentNullException(nameof(parentForkId));
+            var parentFork = GetFork(parentForkId);
 
-            var parentForkData = KeyValueStore.Get<byte[]>(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId,parentForkId), null);
-
-            if (parentForkData == null)
-                throw new ArgumentException($"{parentForkId} doesn't reference actual fork");
-
-            var parentFork = ProtoBufSerializerHelper.Deserialize<Fork>(parentForkData);
-
-            var forkIds = KeyValueStore.Get<List<int>>(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), null);
+            var forkIds = GetForkIds();
             
             if (forkIds.Contains(id))
                 throw new ArgumentException(nameof(id));
 
             forkIds.Add(id);
+            SetForkIds(forkIds);
 
-            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), forkIds, null);
-            
             var newFork = new Fork
             {
                 Id = id,
@@ -140,18 +133,66 @@ namespace KVS.Forks.Core
                 Description = description,
                 Parent = parentFork
             };
-
-            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId, id), ProtoBufSerializerHelper.Serialize(newFork), null);
-
             parentFork.Children.Add(newFork);
-
-            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId, parentFork.Id), ProtoBufSerializerHelper.Serialize(parentFork), null);
-
-            //Set timestamps
-            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, id), DateTime.UtcNow, null);
-            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, parentFork.Id), DateTime.UtcNow, null);
+            SetFork(newFork);
+            SetFork(parentFork);
         }
         
+        public bool DeleteFork(int id)
+        {
+            var forkIds = GetForkIds();
+
+            if (!forkIds.Contains(id))
+                throw new ArgumentException(nameof(id));
+
+            var fork = GetFork(id) ;
+
+            if (fork.ReadOnly)
+                return false;
+            
+            if (fork.Parent != null)
+            {
+                fork.Parent.Children.Remove(fork);
+                SetFork(fork.Parent);
+            }
+
+            forkIds.Remove(fork.Id);
+            SetForkIds(forkIds);
+
+            KeyValueStore.FlushKeys(KeyGenerator.GenerateForkPattern(AppId, id));
+
+            return true;
+        }
+
+        private List<int> GetForkIds()
+        {
+            return KeyValueStore.Get<List<int>>(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), null);
+        }
+
+        private void SetForkIds(List<int> forkIds)
+        {
+            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), forkIds, null);
+        }
+
+        private Fork GetFork(int id)
+        {
+            if (id == 0) throw new ArgumentNullException(nameof(id));
+
+            var forkData = KeyValueStore.Get<byte[]>(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId, id), null);
+
+            if (forkData == null)
+                throw new ArgumentException($"Fork id:{id} doesn't reference actual fork");
+
+            return ProtoBufSerializerHelper.Deserialize<Fork>(forkData);
+
+        }
+
+        private void SetFork(Fork fork)
+        {
+            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId, fork.Id), ProtoBufSerializerHelper.Serialize(fork), null);
+            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, fork.Id), DateTime.UtcNow, null);
+        }
+
         public ForksWrapper<TDataTypesEnum> GetWrapper(int forkId)
         {
             return new ForksWrapper<TDataTypesEnum>(KeyValueStore, AppId, forkId);

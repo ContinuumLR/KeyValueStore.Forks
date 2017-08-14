@@ -26,7 +26,7 @@ namespace KVS.Forks.Core.Entities
         {
             get
             {
-                return Children == null || Children.Count == 0;
+                return Children != null && Children.Count > 0;
             }
         }
         
@@ -46,7 +46,7 @@ namespace KVS.Forks.Core.Entities
                 currentParent = currentParent.Parent;
             }
 
-            return res;
+            return res; 
         }
     }
 }
