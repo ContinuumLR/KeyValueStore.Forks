@@ -10,15 +10,19 @@ namespace KVS.Forks.Core
     {
         public static string GenerateForkPattern(int appId, int forkId)
         {
-            return $"KVSF:{appId}:F:{forkId}*";
+            return $"KVSF:{appId}:F:{forkId}";
+        }
+        public static string GenerateForkValuePattern(int appId, int forkId)
+        {
+            return $"KVSF:{appId}:F:{forkId}:K:";
         }
         public static string GenerateForkValueKey(int appId, int forkId, string key)
         {
-            return $"KVSF:{appId}:F:{forkId}:{key}";
+            return $"KVSF:{appId}:F:{forkId}:K:{key}";
         }
         public static string GenerateForkNullKey(int appId, int forkId, string key)
         {
-            return $"KVSF:{GenerateForkValueKey(appId, forkId, key)}:KVSNull";
+            return $"{GenerateForkValueKey(appId, forkId, key)}{NullKeyPostFix}";
         }
 
         public static string GenerateForksKey(int appId)
@@ -41,5 +45,6 @@ namespace KVS.Forks.Core
         }
 
         public static string AppsKey => "KVSF:Apps";
+        public static string NullKeyPostFix => ":KVSNull";
     }
 }

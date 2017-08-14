@@ -126,5 +126,52 @@ namespace Core.Tests
             manager.DeleteFork(3);
             manager.DeleteFork(2);
         }
+
+
+        [TestMethod]
+        public void ForksManager_Merge()
+        {
+            var store = new StackExchangeRedisKeyValueStore("localhost:6379");
+            var manager = new ForksManager<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store);
+
+            manager.CreateApp(2, "test", "some test app");
+
+            var wrapper = manager.GetWrapper(1);
+            wrapper.StringSet("1", 1);
+
+            manager.CreateFork(2, "test2", "some test fork", 1);
+            wrapper = manager.GetWrapper(2);
+            wrapper.StringSet("2", 2);
+            wrapper.StringSet("3", 3);
+            wrapper.StringSet("4", 4);
+
+            manager.CreateFork(3, "test2", "some test fork", 2);
+            wrapper = manager.GetWrapper(3);
+
+            wrapper.KeyDelete("2");
+            wrapper.StringSet("3", 4);
+            wrapper.StringSet("5", 5);
+
+            manager.CreateFork(21, "test2", "some test fork", 2);
+            wrapper = manager.GetWrapper(21);
+
+            wrapper.KeyDelete("3");
+            wrapper.StringSet("2", 2);
+            wrapper.StringSet("6", 6);
+            wrapper.StringSet("5", 4);
+
+            manager.MergeFork(3, 21);
+            wrapper = manager.GetWrapper(100);
+
+            var values = wrapper.StringGet<int>(new string[] { "1", "2", "3", "4", "5", "6" });
+
+            Assert.AreEqual(5, values.Count);
+            Assert.AreEqual(1, values["1"]);
+            Assert.AreEqual(4, values["3"]);
+            Assert.AreEqual(4, values["4"]);
+            Assert.AreEqual(5, values["5"]);
+            Assert.AreEqual(6, values["6"]);
+
+        }
     }
 }

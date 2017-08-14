@@ -37,7 +37,7 @@ namespace KVS.Forks.Core.Redis.StackExchange
 
         public StackExchangeRedisDataTypesEnum DefaultType => StackExchangeRedisDataTypesEnum.String;
 
-        public T Get<T>(StackExchangeRedisDataTypesEnum type, string key, object extraParams = null)
+        public byte[] Get(StackExchangeRedisDataTypesEnum type, string key, object extraParams = null)
         {
             var db = _redis.GetDatabase();
             var value = new RedisValue();
@@ -54,17 +54,17 @@ namespace KVS.Forks.Core.Redis.StackExchange
             }
 
             if (!value.IsNull)
-                return (T)BinarySerializerHelper.DeserializeObject(value);
+                return value;
             else
-                return default(T);
+                return null;
         }
 
-        public IDictionary<string, T> Get<T>(StackExchangeRedisDataTypesEnum type, IEnumerable<Tuple<string, object>> keys)
+        public IDictionary<string, byte[]> Get(StackExchangeRedisDataTypesEnum type, IEnumerable<Tuple<string, object>> keys)
         {
             var db = _redis.GetDatabase();
 
-            var res = new Dictionary<string, T>();
-            
+            var res = new Dictionary<string, byte[]>();
+
             switch (type)
             {
                 case StackExchangeRedisDataTypesEnum.String:
@@ -74,7 +74,7 @@ namespace KVS.Forks.Core.Redis.StackExchange
                     for (int i = 0; i < keyList.Count; i++)
                     {
                         if (!stringValues[i].IsNull)
-                            res[keyList[i].Item1] = (T)BinarySerializerHelper.DeserializeObject(stringValues[i]);
+                            res[keyList[i].Item1] = stringValues[i];
                     }
 
                     return res;
@@ -95,7 +95,7 @@ namespace KVS.Forks.Core.Redis.StackExchange
                     for (int i = 0; i < keys.Count(); i++)
                     {
                         if (!hashValues[i].IsNull)
-                            res[hashFields[i]] = (T)BinarySerializerHelper.DeserializeObject(hashValues[i]);
+                            res[hashFields[i]] = hashValues[i];
                     }
                     return res;
             }
@@ -103,25 +103,23 @@ namespace KVS.Forks.Core.Redis.StackExchange
             return null;
         }
 
-        public bool Set<T>(StackExchangeRedisDataTypesEnum type, string key, T value, object extraParams = null)
+        public bool Set(StackExchangeRedisDataTypesEnum type, string key, byte[] value, object extraParams = null)
         {
             var db = _redis.GetDatabase();
-
-            var serializedValue = BinarySerializerHelper.SerializeObject(value);
-
+            
             switch (type)
             {
                 case StackExchangeRedisDataTypesEnum.String:
-                    return db.StringSet(key, serializedValue);
+                    return db.StringSet(key, value);
                 case StackExchangeRedisDataTypesEnum.Hash:
                     var castedExtraParams = ParamsCastHelper.TryCastParams<StackExchangeRedisHashParams>(extraParams);
-                    return db.HashSet(key, castedExtraParams.HashField, serializedValue);
+                    return db.HashSet(key, castedExtraParams.HashField, value);
             }
 
             return false;
         }
 
-        public bool Set<T>(StackExchangeRedisDataTypesEnum type, IEnumerable<Tuple<string, T, object>> values)
+        public bool Set(StackExchangeRedisDataTypesEnum type, IEnumerable<Tuple<string, byte[], object>> values)
         {
             var db = _redis.GetDatabase();
 
@@ -129,7 +127,7 @@ namespace KVS.Forks.Core.Redis.StackExchange
             {
                 case StackExchangeRedisDataTypesEnum.String:
                     var stringEntries = values.Select(x => new KeyValuePair<RedisKey, RedisValue>(x.Item1,
-                        BinarySerializerHelper.SerializeObject(x.Item2))).ToArray();
+                        x.Item2)).ToArray();
 
                     return db.StringSet(stringEntries);
                 case StackExchangeRedisDataTypesEnum.Hash:
@@ -140,9 +138,8 @@ namespace KVS.Forks.Core.Redis.StackExchange
 
                     var hashEntries = values.Select(x =>
                     {
-                        var serializedValue = BinarySerializerHelper.SerializeObject(x.Item2);
                         var castedExtraParams = ParamsCastHelper.TryCastParams<StackExchangeRedisHashParams>(x.Item3);
-                        return new HashEntry(castedExtraParams.HashField, serializedValue);
+                        return new HashEntry(castedExtraParams.HashField, x.Item2);
                     }).ToArray();
 
                     db.HashSet(key, hashEntries);
@@ -164,7 +161,7 @@ namespace KVS.Forks.Core.Redis.StackExchange
                 case StackExchangeRedisDataTypesEnum.Hash:
                     if (extraParams == null)
                         return db.KeyDelete(key);
-                    else 
+                    else
                     {
                         var castedExtraParams = ParamsCastHelper.TryCastParams<StackExchangeRedisHashParams>(extraParams);
                         if (!string.IsNullOrEmpty(castedExtraParams.HashField))
@@ -186,7 +183,7 @@ namespace KVS.Forks.Core.Redis.StackExchange
                 case StackExchangeRedisDataTypesEnum.String:
                     return db.KeyDelete(keys.Select(x => (RedisKey)x.Item1).ToArray()) == keys.Count();
                 case StackExchangeRedisDataTypesEnum.Hash:
-                    if (keys.Select(x=> x.Item1).Distinct().Count() > 1) throw new ArgumentException($"Using type {nameof(StackExchangeRedisDataTypesEnum.Hash)} - only one distinct key is allowed");
+                    if (keys.Select(x => x.Item1).Distinct().Count() > 1) throw new ArgumentException($"Using type {nameof(StackExchangeRedisDataTypesEnum.Hash)} - only one distinct key is allowed");
                     var key = keys.First().Item1;
 
                     var hashFields = keys.Select(x =>
@@ -241,6 +238,60 @@ namespace KVS.Forks.Core.Redis.StackExchange
             return true;
         }
 
+        public string[] Keys(string pattern)
+        {
+            var redisServer = _redis.GetServer(_redis.GetEndPoints().First());
+            return redisServer.Keys(0, pattern).Select(x => (string)x).ToArray();
+        }
+
+        public IEnumerable<Tuple<StackExchangeRedisDataTypesEnum, byte[], object>> GetKeyData(string key)
+        {
+            var db = _redis.GetDatabase();
+
+            var redisType = db.KeyType(key);
+            if (redisType == RedisType.None)
+                throw new Exception($"Key {key} returned type None");
+
+            var type = ConvertRedisType(redisType);
+            var res = new List<Tuple<StackExchangeRedisDataTypesEnum, byte[], object>>();
+
+            switch (type)
+            {
+                case StackExchangeRedisDataTypesEnum.String:
+                    var value = db.StringGet(key);
+                    res.Add(Tuple.Create<StackExchangeRedisDataTypesEnum, byte[], object>(type, value, null));
+                    break;
+                case StackExchangeRedisDataTypesEnum.Hash:
+                    var fields = db.HashGetAll(key);
+
+                    foreach (var field in fields)
+                    {
+                        res.Add(Tuple.Create<StackExchangeRedisDataTypesEnum, byte[], object>(type, field.Value, new StackExchangeRedisHashParams
+                        {
+                            HashField = field.Name
+                        }));
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            return res;
+        }
+
+        private StackExchangeRedisDataTypesEnum ConvertRedisType(RedisType redisType)
+        {
+            switch (redisType)
+            {
+                case RedisType.String:
+                    return StackExchangeRedisDataTypesEnum.String;
+                case RedisType.Hash:
+                    return StackExchangeRedisDataTypesEnum.Hash;
+                default:
+                    return StackExchangeRedisDataTypesEnum.String;
+            }
+        }
+        
         public enum StackExchangeRedisDataTypesEnum
         {
             String,

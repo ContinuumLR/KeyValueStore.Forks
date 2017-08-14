@@ -44,6 +44,7 @@ namespace KVS.Forks.Core
             _store = store;
             _forkId = forkId;
             _appId = appId;
+            _currentFork = ProtoBufSerializerHelper.Deserialize<Fork>(Store.Get(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, ForkId), null));
 
             Task.Factory.StartNew(() => UpdateCurrentFork(), TaskCreationOptions.LongRunning);
         }
@@ -65,11 +66,11 @@ namespace KVS.Forks.Core
         {
             while (true)
             {
-                var newTimeStamp = Store.Get<DateTime>(Store.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, ForkId), null);
+                var newTimeStamp = (DateTime)BinarySerializerHelper.DeserializeObject(Store.Get(Store.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, ForkId), null));
                 
                 if (newTimeStamp > _currentForkTimeStamp)
                 {
-                    _currentFork = ProtoBufSerializerHelper.Deserialize<Fork>(Store.Get<byte[]>(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, ForkId), null));
+                    _currentFork = ProtoBufSerializerHelper.Deserialize<Fork>(Store.Get(Store.DefaultType, KeyGenerator.GenerateForkKey(AppId, ForkId), null));
                     _currentForkTimeStamp = newTimeStamp;
                     RaiseForkChanged();
                 }
