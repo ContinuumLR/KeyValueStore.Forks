@@ -139,10 +139,12 @@ namespace KVS.Forks.Core
         private void HandleGracePeriod(ForkRawData newFork)
         {
             Thread.Sleep(TimeSpan.FromSeconds(1));
+
             var fork = GetFork(newFork.Id);
             fork.IsInGracePeriod = false;
-
             SetFork(fork);
+
+            Thread.Sleep(TimeSpan.FromSeconds(1));
         }
 
         public bool DeleteFork(int id)
@@ -281,7 +283,7 @@ namespace KVS.Forks.Core
 
         public ForksWrapper<TDataTypesEnum> GetWrapper(int forkId)
         {
-            return new ForksWrapper<TDataTypesEnum>(KeyValueStore, AppId, forkId);
+            return new ForksWrapper<TDataTypesEnum>(KeyValueStore, AppId, forkId, ForkProvider);
         }
     }
 }
