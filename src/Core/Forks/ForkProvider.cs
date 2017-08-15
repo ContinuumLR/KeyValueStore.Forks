@@ -54,7 +54,11 @@ namespace KVS.Forks.Core
                 _forksTimeStamps[forkId] = (DateTime)BinarySerializerHelper.DeserializeObject(Store.Get(Store.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, forkId), null));
             }
 
-            CreateFork(rawForks, 1);
+            var masterForks = rawForks.Where(x => x.Value.ParentId == 0).Select(x => x.Key).ToArray();
+            foreach (var masterFork in masterForks)
+            {
+                CreateFork(rawForks, masterFork);
+            }
         }
 
         private void CreateFork(Dictionary<int, ForkRawData> rawForks, int forkId)

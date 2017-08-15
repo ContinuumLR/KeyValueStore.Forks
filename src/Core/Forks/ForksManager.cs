@@ -108,14 +108,18 @@ namespace KVS.Forks.Core
             SetFork(masterFork);
         }
 
-        public int CreateFork(string name, string description, int parentForkId)
+        /// <summary>
+        /// Create a new fork
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="description"></param>
+        /// <param name="parentForkId">If parent is null, a new master fork will be created</param>
+        /// <returns>New fork id</returns>
+        public int CreateFork(string name, string description, int? parentForkId = null)
         {
-            var parentFork = GetFork(parentForkId);
-
             var forkIds = GetForkIds();
-
             var newId = forkIds.Max() + 1;
-            
+
             forkIds.Add(newId);
             SetForkIds(forkIds);
 
@@ -124,12 +128,18 @@ namespace KVS.Forks.Core
                 Id = newId,
                 Name = name,
                 Description = description,
-                ParentId = parentFork.Id,
+                ParentId = parentForkId ?? 0,
                 IsInGracePeriod = true
             };
-            parentFork.ChildrenIds.Add(newFork.Id);
+
+            if (parentForkId.HasValue)
+            {
+                var parentFork = GetFork(parentForkId.Value);
+
+                parentFork.ChildrenIds.Add(newFork.Id);
+                SetFork(parentFork);
+            }
             SetFork(newFork);
-            SetFork(parentFork);
 
             HandleGracePeriod(newFork);
 
@@ -235,7 +245,7 @@ namespace KVS.Forks.Core
 
             return newForkId;
         }
-
+        
         private bool IsCommonParent(Fork fork, Fork targetFork)
         {
             var currentFork = targetFork;
@@ -249,6 +259,65 @@ namespace KVS.Forks.Core
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Create new master fork with the data from an exsiting fork
+        /// This is used to prune unused forks
+        /// The data is trasferred to a new master fork to allow checking the data before deleting the old fork tree.
+        /// </summary>
+        /// <param name="forkId">Fork to prune</param>
+        /// <returns>New master fork id with the data from the old fork</returns>
+        public int PruneForks(int forkId)
+        {
+            var usedKeys = new HashSet<string>();
+            var deletedKeys = new HashSet<string>();
+            var valuesToSet = new List<Tuple<string, TDataTypesEnum, byte[], object>>();
+
+            var fork = ForkProvider.GetFork(forkId);
+            var currentFork = fork;
+
+            while (currentFork != null)
+            {
+                var forkPattern = KeyGenerator.GenerateForkValuePattern(AppId, currentFork.Id);
+                var keys = KeyValueStore.Keys($"{forkPattern}*");
+
+                foreach (var key in keys)
+                {
+                    var originalKey = key.Substring(forkPattern.Length);
+
+                    // If the key was used/deleted in a lower fork, this key is not relevant
+                    if (usedKeys.Contains(originalKey) || deletedKeys.Contains(originalKey))
+                        continue;
+
+                    if (originalKey.EndsWith(KeyGenerator.NullKeyPostFix))
+                        deletedKeys.Add(originalKey.Substring(0, originalKey.Length - KeyGenerator.NullKeyPostFix.Length));
+                    else
+                    {
+                        var keyDataCollection = KeyValueStore.GetKeyData(key);
+
+                        foreach (var keyData in keyDataCollection)
+                        {
+                            valuesToSet.Add(Tuple.Create(originalKey, keyData.Item1, keyData.Item2, keyData.Item3));
+                        }
+
+                        usedKeys.Add(originalKey);
+                    }
+                }
+
+                currentFork = currentFork.Parent;
+            }
+
+            var newForkId = CreateFork("master",$"Pruned from {fork.Id}:{fork.Name}");
+            
+            var wrapper = GetWrapper(newForkId);
+            
+            foreach (var value in valuesToSet)
+            {
+                wrapper.Set(value.Item2, value.Item1, value.Item3, value.Item4);
+            }
+
+            return newForkId;
         }
 
         private List<int> GetForkIds()

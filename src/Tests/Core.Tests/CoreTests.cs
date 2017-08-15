@@ -96,9 +96,6 @@ namespace Core.Tests
             var masterWrapper = manager.GetWrapper(1);
 
             var forkId = manager.CreateFork("test2", "some test fork", 1);
-
-            manager.GetWrapper(2);
-
             var forkId2 = manager.CreateFork("test3", "some test fork", 1);
             var forkId3 = manager.CreateFork("test4", "some test fork", 2);
 
@@ -106,8 +103,7 @@ namespace Core.Tests
             manager.DeleteFork(forkId2);
             manager.DeleteFork(forkId);
         }
-
-
+        
         [TestMethod]
         public void ForksManager_Merge()
         {
@@ -154,7 +150,54 @@ namespace Core.Tests
             Assert.AreEqual(4, values["4"]);
             Assert.AreEqual(5, values["5"]);
             Assert.AreEqual(6, values["6"]);
+        }
 
+        [TestMethod]
+        public void ForksManager_Prune()
+        {
+            var store = new StackExchangeRedisKeyValueStore("localhost:6379");
+
+            store.FlushKeys("KVSF*");
+
+            var manager = new ForksManager<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store);
+
+            manager.CreateApp(3, "test", "some test app");
+
+            var wrapper = manager.GetWrapper(1);
+            wrapper.StringSet("1", 1);
+
+            var forkId = manager.CreateFork("test2", "some test fork", 1);
+            wrapper = manager.GetWrapper(forkId);
+            wrapper.StringSet("2", 2);
+            wrapper.StringSet("3", 3);
+            wrapper.StringSet("4", 4);
+
+            forkId = manager.CreateFork("test2", "some test fork", 2);
+            wrapper = manager.GetWrapper(forkId);
+
+            wrapper.KeyDelete("2");
+            wrapper.StringSet("3", 4);
+            wrapper.StringSet("5", 5);
+
+            var forkId2 = manager.CreateFork("test2", "some test fork", 2);
+            wrapper = manager.GetWrapper(forkId2);
+
+            wrapper.KeyDelete("3");
+            wrapper.StringSet("2", 2);
+            wrapper.StringSet("6", 6);
+            wrapper.StringSet("5", 4);
+
+            var newForkId = manager.PruneForks(forkId2);
+            wrapper = manager.GetWrapper(newForkId);
+
+            var values = wrapper.StringGet<int>(new string[] { "1", "2", "3", "4", "5", "6" });
+
+            Assert.AreEqual(5, values.Count);
+            Assert.AreEqual(1, values["1"]);
+            Assert.AreEqual(2, values["2"]);
+            Assert.AreEqual(4, values["4"]);
+            Assert.AreEqual(4, values["5"]);
+            Assert.AreEqual(6, values["6"]);
         }
     }
 }
