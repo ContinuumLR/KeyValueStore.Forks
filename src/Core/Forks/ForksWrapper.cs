@@ -23,7 +23,7 @@ namespace KVS.Forks.Core
         private readonly ForkProvider<TDataTypesEnum> _forkProvider;
 
         public ForksWrapper(IKeyValueStore<TDataTypesEnum> keyValueStore,
-            int appId, int forkId)
+            int appId, int forkId, ForkProvider<TDataTypesEnum> forkProvider)
         {
             _keyValueStore = keyValueStore ?? throw new ArgumentNullException(nameof(keyValueStore));
             _appId = appId;
@@ -31,14 +31,14 @@ namespace KVS.Forks.Core
             if (!typeof(TDataTypesEnum).IsEnum)
                 throw new ArgumentException($"{nameof(TDataTypesEnum)} must be an enumerated type");
 
-            _forkProvider = new ForkProvider<TDataTypesEnum>(keyValueStore, AppId);
+            _forkProvider = forkProvider;
             Fork = _forkProvider.GetFork(forkId);
             _forkProvider.ForkChanged += _forkProvider_ForkChanged;
         }
 
         private void _forkProvider_ForkChanged(object sender, ForkChangedEventArgs e)
         {
-            if(e.ForkId == Fork.Id)
+            if (e.ForkIds.Contains(Fork.Id))
                 Fork = _forkProvider.GetFork(Fork.Id);
         }
 
@@ -136,7 +136,7 @@ namespace KVS.Forks.Core
                     foreach (var key in byteValues.Keys)
                         res[generatedKeyToOriginalKey[key]] = (T)BinarySerializerHelper.DeserializeObject(byteValues[key]);
                 }
-                
+
                 missingKeys = missingKeys.Except(byteValues.Keys.Select(x => generatedKeyToOriginalKey[x])).ToList();
 
                 var nullMissingKeys = new List<string>();
