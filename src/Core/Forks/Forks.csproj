@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DTOs\Fork.cs" />
     <Compile Include="Entities\App.cs" />
     <Compile Include="Entities\Fork.cs" />
     <Compile Include="Entities\ForkRawData.cs" />

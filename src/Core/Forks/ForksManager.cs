@@ -327,6 +327,23 @@ namespace KVS.Forks.Core
             return (List<int>)BinarySerializerHelper.DeserializeObject(KeyValueStore.Get(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), null));
         }
 
+        public List<DTOs.Fork> GetMasterForks()
+        {
+            return ForkProvider.GetMasterForks().Select(x=> MapToDto(x)).ToList();
+        }
+
+        private DTOs.Fork MapToDto(Fork fork)
+        {
+            return new DTOs.Fork
+            {
+                Id = fork.Id,
+                Name = fork.Name,
+                Description = fork.Description,
+                ReadOnly = fork.ReadOnly,
+                Children = fork.Children.Select(x=> MapToDto(x)).ToList()
+            };
+        }
+
         private void SetForkIds(List<int> forkIds)
         {
             KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(AppId), BinarySerializerHelper.SerializeObject(forkIds), null);
@@ -349,7 +366,7 @@ namespace KVS.Forks.Core
             KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId, fork.Id), ProtoBufSerializerHelper.Serialize(fork), null);
             KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, fork.Id), BinarySerializerHelper.SerializeObject(DateTime.UtcNow), null);
         }
-
+        
         public ForksWrapper<TDataTypesEnum> GetWrapper(int forkId)
         {
             return new ForksWrapper<TDataTypesEnum>(KeyValueStore, AppId, forkId, ForkProvider);

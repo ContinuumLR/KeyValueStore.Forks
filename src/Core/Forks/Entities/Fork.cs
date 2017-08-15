@@ -7,17 +7,11 @@ namespace KVS.Forks.Core.Entities
     public class Fork
     {
         public int Id { get; set; }
-
         public string Name { get; set; }
-
         public string Description { get; set; }
-
         public Fork Parent { get; set; }
-
         public bool IsInGracePeriod { get; set; }
-
         public List<Fork> Children { get; set; } = new List<Fork>();
-
         public bool ReadOnly
         {
             get
@@ -25,7 +19,6 @@ namespace KVS.Forks.Core.Entities
                 return IsInGracePeriod || Children.Count > 0;
             }
         }
-
         public List<Fork> GetAllParents()
         {
             if (Parent == null)

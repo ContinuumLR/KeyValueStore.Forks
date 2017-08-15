@@ -57,7 +57,7 @@ namespace Core.Tests
         }
 
         [TestMethod]
-        public void ForksWrapper_ForkDeleteTest()
+        public void ForksManager_KeyDeleteTest()
         {
             var store = new StackExchangeRedisKeyValueStore("localhost:6379");
             store.FlushKeys("KVSF*");
@@ -85,7 +85,7 @@ namespace Core.Tests
         }
 
         [TestMethod]
-        public void ForksManager_CreateApp()
+        public void ForksWrapper_ForkDeleteTest()
         {
             var store = new StackExchangeRedisKeyValueStore("localhost:6379");
             store.FlushKeys("KVSF*");
@@ -105,7 +105,7 @@ namespace Core.Tests
         }
         
         [TestMethod]
-        public void ForksManager_Merge()
+        public void ForksManager_MergeTest()
         {
             var store = new StackExchangeRedisKeyValueStore("localhost:6379");
 
@@ -153,7 +153,7 @@ namespace Core.Tests
         }
 
         [TestMethod]
-        public void ForksManager_Prune()
+        public void ForksManager_PruneTest()
         {
             var store = new StackExchangeRedisKeyValueStore("localhost:6379");
 
@@ -198,6 +198,27 @@ namespace Core.Tests
             Assert.AreEqual(4, values["4"]);
             Assert.AreEqual(4, values["5"]);
             Assert.AreEqual(6, values["6"]);
+        }
+
+        [TestMethod]
+        public void ForksWrapper_GetMasterForksTest()
+        {
+            var store = new StackExchangeRedisKeyValueStore("localhost:6379");
+            store.FlushKeys("KVSF*");
+            var manager = new ForksManager<StackExchangeRedisKeyValueStore.StackExchangeRedisDataTypesEnum>(store);
+
+            manager.CreateApp(1, "test", "some test app");
+            
+            var masterWrapper = manager.GetWrapper(1);
+
+            var forkId = manager.CreateFork("test2", "some test fork", 1);
+            var forkId2 = manager.CreateFork("test3", "some test fork", 1);
+            var forkId3 = manager.CreateFork("test4", "some test fork", forkId2);
+            var forkId4 = manager.CreateFork("new master", "some test fork");
+
+            var masterForks = manager.GetMasterForks();
+
+            Assert.AreEqual(2, masterForks.Count);
         }
     }
 }

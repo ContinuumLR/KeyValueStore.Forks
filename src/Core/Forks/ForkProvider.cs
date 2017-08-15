@@ -97,6 +97,11 @@ namespace KVS.Forks.Core
             return _forks[forkId];
         }
 
+        public List<Fork> GetMasterForks()
+        {
+            return _forks.Values.Where(x => x.Parent == null).ToList();
+        }
+
         private void UpdateFork(Fork forkToUpdate, ForkRawData forkRawData)
         {
             forkToUpdate.Name = forkRawData.Name;
@@ -184,6 +189,7 @@ namespace KVS.Forks.Core
 
         public event EventHandler<ForkChangedEventArgs> ForkChanged;
     }
+
     public class ForkChangedEventArgs : EventArgs
     {
         public List<int> ForkIds { get; set; }
