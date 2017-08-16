@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Forks", "Core\Forks\Forks.c
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.Tests", "Tests\Core.Tests\Core.Tests.csproj", "{36481B87-61DA-4FEC-917A-E349A5D9670E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleUtility", "Utilities\ConsoleUtility\ConsoleUtility.csproj", "{354AA8C4-AFF2-4DEF-A9EE-DB7BAA6EBAD3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{36481B87-61DA-4FEC-917A-E349A5D9670E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{36481B87-61DA-4FEC-917A-E349A5D9670E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{36481B87-61DA-4FEC-917A-E349A5D9670E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{354AA8C4-AFF2-4DEF-A9EE-DB7BAA6EBAD3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{354AA8C4-AFF2-4DEF-A9EE-DB7BAA6EBAD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{354AA8C4-AFF2-4DEF-A9EE-DB7BAA6EBAD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{354AA8C4-AFF2-4DEF-A9EE-DB7BAA6EBAD3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -48,5 +54,6 @@ Global
 		{7AF34478-9B31-4016-B1F1-3A8E824E166C} = {5D6C318C-DD86-4910-99FD-F4432056F433}
 		{315034B9-A99F-4253-8581-B74950D9407D} = {5D6C318C-DD86-4910-99FD-F4432056F433}
 		{36481B87-61DA-4FEC-917A-E349A5D9670E} = {6D8CB7B6-3D8B-4CFC-B94D-7DEFDBB6D257}
+		{354AA8C4-AFF2-4DEF-A9EE-DB7BAA6EBAD3} = {3A401F3B-C21A-4F28-928E-B1EAF9BAE60F}
 	EndGlobalSection
 EndGlobal

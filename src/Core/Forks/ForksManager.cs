@@ -44,8 +44,20 @@ namespace KVS.Forks.Core
                 throw new ArgumentException(nameof(appId));
 
             //Check if app exists
+            var bytesAppIds = KeyValueStore.Get(KeyValueStore.DefaultType, KeyGenerator.AppsKey, null);
+            List<int> appIds = null;
+
+            if (bytesAppIds != null)
+            {
+                appIds = (List<int>)BinarySerializerHelper.DeserializeObject(bytesAppIds);
+            }
+
+            if (appIds == null || !appIds.Contains(appId))
+                throw new ArgumentException($"{nameof(appId)} - doesn't exist");
 
             AppId = appId;
+
+            ForkProvider = new ForkProvider<TDataTypesEnum>(KeyValueStore, AppId);
         }
 
         /// <summary>
@@ -85,12 +97,42 @@ namespace KVS.Forks.Core
             };
 
             KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateAppKey(appId), ProtoBufSerializerHelper.Serialize(res), null);
+            KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForksKey(appId), BinarySerializerHelper.SerializeObject(new List<int>()), null);
 
             SetApp(appId);
 
             CreateMasterFork();
+        }
 
-            ForkProvider = new ForkProvider<TDataTypesEnum>(KeyValueStore, AppId);
+        public List<DTOs.App> GetApps()
+        {
+            var bytesAppIds = KeyValueStore.Get(KeyValueStore.DefaultType, KeyGenerator.AppsKey, null);
+            List<int> appIds = null;
+
+            if (bytesAppIds == null)
+                return new List<DTOs.App>();
+
+            appIds = (List<int>)BinarySerializerHelper.DeserializeObject(bytesAppIds);
+
+            var res = new List<DTOs.App>();
+
+            foreach (var appId in appIds)
+            {
+                var bytesApp = KeyValueStore.Get(KeyValueStore.DefaultType, KeyGenerator.GenerateAppKey(appId), null);
+                if (bytesApp == null)
+                    continue;
+
+                var app = ProtoBufSerializerHelper.Deserialize<App>(bytesApp);
+
+                res.Add(new DTOs.App
+                {
+                    Id = app.Id,
+                    Name = app.Name,
+                    Description = app.Description
+                });
+            }
+
+            return res;
         }
 
         private void CreateMasterFork()
@@ -157,6 +199,11 @@ namespace KVS.Forks.Core
             Thread.Sleep(TimeSpan.FromSeconds(1));
         }
 
+        /// <summary>
+        /// Deletes a fork, only leaves can be deleted
+        /// </summary>
+        /// <param name="id">Fork id to delete</param>
+        /// <returns>success</returns>
         public bool DeleteFork(int id)
         {
             var forkIds = GetForkIds();
@@ -201,6 +248,9 @@ namespace KVS.Forks.Core
 
             while (!IsCommonParent(currentFork, targetFork))
             {
+                if (currentFork == null)
+                    throw new ArgumentException($"No common parents between {originForkId} and {targetForkId}");
+
                 var forkPattern = KeyGenerator.GenerateForkValuePattern(AppId, currentFork.Id);
                 var keys = KeyValueStore.Keys($"{forkPattern}*");
 
@@ -247,7 +297,7 @@ namespace KVS.Forks.Core
 
             return newForkId;
         }
-        
+
         private bool IsCommonParent(Fork fork, Fork targetFork)
         {
             var currentFork = targetFork;
@@ -310,10 +360,10 @@ namespace KVS.Forks.Core
                 currentFork = currentFork.Parent;
             }
 
-            var newForkId = CreateFork("master",$"Pruned from {fork.Id}:{fork.Name}");
-            
+            var newForkId = CreateFork("master", $"Pruned from {fork.Id}:{fork.Name}");
+
             var wrapper = GetWrapper(newForkId);
-            
+
             foreach (var value in valuesToSet)
             {
                 wrapper.Set(value.Item2, value.Item1, value.Item3, value.Item4);
@@ -329,7 +379,7 @@ namespace KVS.Forks.Core
 
         public List<DTOs.Fork> GetMasterForks()
         {
-            return ForkProvider.GetMasterForks().Select(x=> MapToDto(x)).ToList();
+            return ForkProvider.GetMasterForks().Select(x => MapToDto(x)).ToList();
         }
 
         private DTOs.Fork MapToDto(Fork fork)
@@ -340,7 +390,7 @@ namespace KVS.Forks.Core
                 Name = fork.Name,
                 Description = fork.Description,
                 ReadOnly = fork.ReadOnly,
-                Children = fork.Children.Select(x=> MapToDto(x)).ToList()
+                Children = fork.Children.Select(x => MapToDto(x)).ToList()
             };
         }
 
@@ -366,7 +416,7 @@ namespace KVS.Forks.Core
             KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkKey(AppId, fork.Id), ProtoBufSerializerHelper.Serialize(fork), null);
             KeyValueStore.Set(KeyValueStore.DefaultType, KeyGenerator.GenerateForkTimeStampKey(AppId, fork.Id), BinarySerializerHelper.SerializeObject(DateTime.UtcNow), null);
         }
-        
+
         public ForksWrapper<TDataTypesEnum> GetWrapper(int forkId)
         {
             return new ForksWrapper<TDataTypesEnum>(KeyValueStore, AppId, forkId, ForkProvider);
