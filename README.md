@@ -5,34 +5,23 @@ We try to make it as performant as possible considering some performance is the 
 # Usage
 Using the console tool - create app, choose your key value store implementation (Currently only redis is implemented, but it is easy to implement more wrappers for other engines), create a FroksWrapper with a forkId and start using the wrapper as your data source.
 
-# Completed features
-* StackExchange.Redis wrapper implemetation for Set/Get with String/Hash data types
-* Set/Get ForkWrapper based on forks, currently a parent fork is Readonly while leaf forks are not.
-* Delete - apis
-* ForkWrapper
-  * Fork provider + Grace period, timestamp outside the fork, locking while replacing
-* Fork Management (apis)
-  * Create app - creates master fork. (Use ZeroFormatter)
-  * Create (fork, not maser)-  (Use ZeroFormatter)
-    * Grace period (With adding forks)
-  * Delete - only when no children, flush all keys
-  * Merge - only update keys, the target mustn’t have children
-  
-# Missing first version features
+Examples comming soon.
 
-* Areas
-* Fork Management (apis)
-  * Merge by area
-  * Prune old forks
-  * Select forks
-  * Set Readonly
-* Console Tool
+# Features
+* StackExchange.Redis wrapper implemetation for Set/Get with String/Hash data types
+* Set/Get/Delete wrapped based on forks, currently a parent fork is Readonly while leaf forks are not.
+* ForkManager (including apis + console utility)
+  * CreateApp - (also creates master fork)
+  * CreateFork
+  * DeleteFork - only when not readonly (flushes all keys, and removes from the KVSF listings)
+  * MergeFork - merges fork's data into another fork, creating a new child fork in the process in order not to lose data.
+  * PruneFork - in order to clean history of forks, creates a new master fork from an origin fork.
+  * Common usage apis - GetMasterForks, GetApps
 
 # Future features
-* Allow working on parent fork (Complex Locking in redis).
-* Delete when children exist (Merge keys from deleted fork into children)
+* Allow working on parent fork (Complex Locking in store).
+* Delete fork when children exist (Merge keys from deleted fork into children / Also delete children)
 * ForkStatusEnum (Controlling when a fork is available for different uses - will replace Readonly flag)
-
 
 # License
 KeyValueStore.Forks is licensed as AGPL software.
